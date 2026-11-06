@@ -1,0 +1,21 @@
+pkgbase = pixdial
+	pkgdesc = A Python SDK and CLI for hardware screens on Linux
+	pkgver = 0.1.0
+	pkgrel = 1
+	url = https://github.com/YordiLorenzo/pixdial
+	arch = any
+	license = GPL-3.0-or-later
+	license = OFL-1.1
+	checkdepends = python-pytest
+	makedepends = python-build
+	makedepends = python-installer
+	makedepends = python-hatchling
+	makedepends = python-hatch-fancy-pypi-readme
+	depends = python>=3.12
+	depends = python-numpy
+	depends = python-pillow
+	depends = python-cryptography
+	source = https://files.pythonhosted.org/packages/2e/2e/8e1bbbf0a6f1407a41a176a872eb71a11a2cc684871a2de225718570bb19/pixdial-0.1.0.tar.gz
+	sha256sums = 924e5ea534af537ecfca0210d455b8df2a6c16f6bfd204c19d1a696414fb07f2
+
+pkgname = pixdial

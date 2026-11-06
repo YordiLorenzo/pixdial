@@ -110,6 +110,27 @@ Actions** and run **Actions → Pages → Run workflow**. The production URL is
 GitHub Pages project sites share the origin's `/robots.txt`; `site/robots.txt` records the intended policy and
 sitemap, but does not override that origin-wide file.
 
+## Releasing
+
+1. Bump the version in `pyproject.toml` and `src/pixdial/__init__.py`, refresh `uv.lock`
+   with `uv lock`, and update `CHANGELOG.md`. Run the CI checks above.
+2. Commit the release changes and create the matching `vX.Y.Z` git tag.
+3. Build and validate the release artifacts:
+
+   ```sh
+   uv build
+   uvx twine check dist/pixdial-X.Y.Z*
+   ```
+
+   Replace `X.Y.Z` with the release version and check the sdist and wheel before uploading.
+4. Publish those artifacts with `uv publish dist/pixdial-X.Y.Z*`, push the release commit
+   and tag, and create the GitHub release with `gh release create vX.Y.Z dist/pixdial-X.Y.Z*`.
+   Use the changelog entry as the release notes. Publishing requires PyPI credentials and
+   GitHub push/release access.
+5. Update the version and sdist hash in [packaging/](packaging/README.md), including the
+   AUR source URL and `.SRCINFO`. Build and submit the AUR and nixpkgs updates using that
+   directory's instructions.
+
 ## Send a change
 
 1. Keep the change focused and explain what now works, with a reproduction for a fix.

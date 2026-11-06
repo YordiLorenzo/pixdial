@@ -1,0 +1,32 @@
+# Maintainer: YordiLorenzo <yordilorenzo@gmail.com>
+pkgname=pixdial
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="A Python SDK and CLI for hardware screens on Linux"
+arch=('any')
+url="https://github.com/YordiLorenzo/pixdial"
+license=('GPL-3.0-or-later' 'OFL-1.1')
+depends=('python>=3.12' 'python-numpy' 'python-pillow' 'python-cryptography')
+makedepends=('python-build' 'python-installer' 'python-hatchling' 'python-hatch-fancy-pypi-readme')
+checkdepends=('python-pytest')
+source=("https://files.pythonhosted.org/packages/2e/2e/8e1bbbf0a6f1407a41a176a872eb71a11a2cc684871a2de225718570bb19/$pkgname-$pkgver.tar.gz")
+sha256sums=('924e5ea534af537ecfca0210d455b8df2a6c16f6bfd204c19d1a696414fb07f2')
+
+build() {
+  cd "$pkgname-$pkgver"
+  python -m build --wheel --no-isolation
+}
+
+check() {
+  cd "$pkgname-$pkgver"
+  # The wheel is not installed yet; make the src layout importable.
+  PYTHONPATH="$PWD/src" python -m pytest
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+  install -Dm644 src/pixdial/data/60-pixdial.rules "$pkgdir/usr/lib/udev/rules.d/60-pixdial.rules"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 src/pixdial/fonts/LICENSE-Lato.txt "$pkgdir/usr/share/licenses/$pkgname/LICENSE-Lato.txt"
+}
