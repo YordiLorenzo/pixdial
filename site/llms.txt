@@ -7,9 +7,9 @@ three themes (warm, ember and ice), and Python plugins for designs, sources and 
 The only supported physical panel is the Lian Li UNI FAN SL V3 Wireless LCD,
 USB 1cbe:0005, 400 × 400 pixels, on Linux. It does not control fan speed or RGB lighting.
 
-Requires Python 3.12+, Git and uv. Install from Git, not PyPI:
+Requires Python 3.12+ and uv (or pipx). Install from PyPI:
 
-    uv tool install 'git+https://github.com/YordiLorenzo/pixdial.git'
+    uv tool install pixdial
 
 `pixdial render crown --out preview` produces a demo PNG without hardware,
 including on macOS. Website images show demo readings. PSU readings, connector

@@ -2,7 +2,7 @@
 name = "pixdial"
 version = "0.1.0"
 description = "A Python SDK and CLI for hardware screens on Linux"
-readme = "README.md"
+dynamic = ["readme"]
 requires-python = ">=3.12"
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE", "src/pixdial/fonts/LICENSE-Lato.txt"]
@@ -27,9 +27,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/YordiLorenzo/pixdial"
+Homepage = "https://yordilorenzo.github.io/pixdial/"
 Repository = "https://github.com/YordiLorenzo/pixdial"
 Issues = "https://github.com/YordiLorenzo/pixdial/issues"
+Changelog = "https://github.com/YordiLorenzo/pixdial/blob/main/CHANGELOG.md"
 
 [project.scripts]
 pixdial = "pixdial.cli:main"
@@ -42,7 +43,7 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling>=1.27"]
+requires = ["hatchling>=1.27", "hatch-fancy-pypi-readme>=24"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
@@ -73,3 +74,22 @@ warn_return_any = false  # numpy's stubs type many array operations as Any
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+# PyPI renders the README without the repo around it: point its relative images and links at GitHub.
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+path = "README.md"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = '(src="|\]\()(docs/images/[^")]+)'
+replacement = '\1https://raw.githubusercontent.com/YordiLorenzo/pixdial/main/\2'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = '(href="|\]\()(?!https?://|#|mailto:)([^")]+)'
+replacement = '\1https://github.com/YordiLorenzo/pixdial/blob/main/\2'
+
+[tool.hatch.build.targets.sdist]
+# The README's graphics and the site are served from GitHub; packagers get the code, tests and docs text.
+exclude = ["docs/images", "site", ".github"]

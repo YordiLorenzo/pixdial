@@ -7,7 +7,7 @@ Include the affected revision, reproduction steps, expected impact and a minimal
 device serials removed. Keep exploit details out of public issues and pull requests.
 
 If private reporting is not available, open an issue containing only a request for a private contact channel.
-Do not include the vulnerability itself. This policy covers the current development branch; 0.1.0 is unreleased.
+Do not include the vulnerability itself. This policy covers the latest release and the main branch.
 
 ## Permissions and hardware
 

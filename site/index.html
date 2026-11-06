@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>pixdial | Hardware dashboards for Linux, built in Python</title>
-  <meta name="description" content="Put live hardware readings on your PC's LCD panels. Explore 14 designs, three themes and a Python SDK. Install pixdial from Git or preview without hardware.">
+  <meta name="description" content="Put live hardware readings on your PC's LCD panels. Explore 14 designs, three themes and a Python SDK. Install pixdial from PyPI or preview without hardware.">
   <meta name="theme-color" content="#070402">
   <link rel="canonical" href="https://yordilorenzo.github.io/pixdial/">
   <meta property="og:type" content="website">
@@ -37,8 +37,8 @@
       "description": "A Python SDK and CLI for hardware screens on Linux, with 14 built-in designs, three themes and plugins for designs, sources and devices.",
       "applicationCategory": "UtilitiesApplication",
       "operatingSystem": "Linux",
-      "softwareRequirements": "Python 3.12 or newer; Git; uv. Physical panel support: Lian Li UNI FAN SL V3 Wireless LCD, USB 1cbe:0005.",
-      "downloadUrl": "https://github.com/YordiLorenzo/pixdial",
+      "softwareRequirements": "Python 3.12 or newer; uv or pipx. Physical panel support: Lian Li UNI FAN SL V3 Wireless LCD, USB 1cbe:0005.",
+      "downloadUrl": "https://pypi.org/project/pixdial/",
       "license": "https://www.gnu.org/licenses/gpl-3.0.html",
       "isAccessibleForFree": true,
       "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
@@ -69,10 +69,10 @@
         <p class="hero-description">Put live readings on the LCDs in your PC. Pick a design, match your build, or write your own.</p>
         <div class="install-command">
           <span class="prompt" aria-hidden="true">$</span>
-          <code id="install-command">uv tool install 'git+https://github.com/YordiLorenzo/pixdial.git'</code>
+          <code id="install-command">uv tool install pixdial</code>
           <button class="copy-button" type="button" data-copy="install-command" aria-label="Copy install command" hidden>Copy</button>
         </div>
-        <p class="requirements">Python 3.12+ <span aria-hidden="true">·</span> Git + <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> <span aria-hidden="true">·</span> Free, GPL-3.0-or-later</p>
+        <p class="requirements">Python 3.12+ <span aria-hidden="true">·</span> <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> or pipx <span aria-hidden="true">·</span> Free, GPL-3.0-or-later</p>
         <div class="hero-links">
           <a class="button button-primary" href="#setup">Set up your panel <span aria-hidden="true">↗</span></a>
           <a class="text-link" href="https://github.com/YordiLorenzo/pixdial">View on GitHub <span aria-hidden="true">↗</span></a>
@@ -142,7 +142,7 @@
     </section>
 
     <section class="section wrap" id="setup" aria-labelledby="setup-title">
-      <div class="section-heading"><div><p class="eyebrow">FROM TERMINAL TO PANEL</p><h2 id="setup-title">Your first dashboard.</h2></div><p>Linux, Python 3.12+, Git and <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>. Install from Git; pixdial is not on PyPI yet.</p></div>
+      <div class="section-heading"><div><p class="eyebrow">FROM TERMINAL TO PANEL</p><h2 id="setup-title">Your first dashboard.</h2></div><p>Linux, Python 3.12+ and <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> or pipx. Installs from PyPI.</p></div>
       <ol class="setup-grid">
         <li><span class="step-number" aria-hidden="true">01</span><h3>Install &amp; connect.</h3><p>Run the install command above. Apply the <a href="https://github.com/YordiLorenzo/pixdial#quick-start">USB permission rule</a>, then find your panel's serial.</p><pre><code>pixdial devices</code></pre></li>
         <li><span class="step-number" aria-hidden="true">02</span><h3>Choose your design.</h3><p>Save <code>~/.config/pixdial/config.toml</code> with your panel's serial in place of <code>YOUR_PANEL_SERIAL</code>.</p><pre><code>layout = ["crown"]
@@ -207,7 +207,7 @@ design.render(now=0).save(<span class="syntax-string">"demo.png"</span>)</code><
     <section class="section final-cta wrap" aria-labelledby="install-title">
       <img src="images/icon.svg" alt="" width="64" height="64" loading="lazy">
       <h2 id="install-title">Make the screen yours.</h2>
-      <div class="install-command"><span class="prompt" aria-hidden="true">$</span><code id="install-command-footer">uv tool install 'git+https://github.com/YordiLorenzo/pixdial.git'</code><button class="copy-button" type="button" data-copy="install-command-footer" aria-label="Copy install command" hidden>Copy</button></div>
+      <div class="install-command"><span class="prompt" aria-hidden="true">$</span><code id="install-command-footer">uv tool install pixdial</code><button class="copy-button" type="button" data-copy="install-command-footer" aria-label="Copy install command" hidden>Copy</button></div>
       <div class="final-links"><a class="text-link" href="#setup">Setup guide <span aria-hidden="true">↑</span></a><a class="text-link" href="https://github.com/YordiLorenzo/pixdial">GitHub <span aria-hidden="true">↗</span></a></div>
     </section>
   </main>

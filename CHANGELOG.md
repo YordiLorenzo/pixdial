@@ -5,6 +5,8 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-06
+
 ### Added
 
 - Initial 0.1.0 implementation: a Python SDK and CLI for hardware screens on Linux.
@@ -21,6 +23,5 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Prepared GPL-3.0-or-later package metadata and licence; bundled Lato fonts retain their SIL Open Font License.
 - Added CI for Ruff, mypy and pytest on Ubuntu with Python 3.12 and 3.13.
 
-Version 0.1.0 has not been released. Its date and release link will be added when it is tagged.
-
-[Unreleased]: https://github.com/YordiLorenzo/pixdial/commits/HEAD
+[Unreleased]: https://github.com/YordiLorenzo/pixdial/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/YordiLorenzo/pixdial/releases/tag/v0.1.0

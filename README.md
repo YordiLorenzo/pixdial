@@ -19,17 +19,18 @@ themes, or write a design of your own. pixdial draws each frame on the host and 
 
 ## Quick start
 
-You need Linux, Python 3.12 or newer, Git, [uv](https://docs.astral.sh/uv/getting-started/installation/), and a
+You need Linux, Python 3.12 or newer, [uv](https://docs.astral.sh/uv/getting-started/installation/), and a
 [supported panel](#supported-hardware). For a preview without hardware, install pixdial and run
 `pixdial render crown --state busy --out preview`.
 
-1. **Install from Git.** pixdial is not on PyPI yet.
+1. **Install.**
 
    ```sh
-   uv tool install 'git+https://github.com/YordiLorenzo/pixdial.git'
+   uv tool install pixdial
    ```
 
-   If your shell cannot find `pixdial`, run `uv tool update-shell` and open a new terminal.
+   `pipx install pixdial` works too. If your shell cannot find `pixdial`, run `uv tool update-shell` and open a
+   new terminal.
 
 2. **Give your user access to the panel.** On Linux with udev and an active local login, install the
    [bundled rule](src/pixdial/data/60-pixdial.rules):
