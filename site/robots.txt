@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /pixdial/
+
+Sitemap: https://yordilorenzo.github.io/pixdial/sitemap.xml

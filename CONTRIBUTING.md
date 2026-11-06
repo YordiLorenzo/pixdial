@@ -70,6 +70,46 @@ It composes `docs/images/designs.png`, `themes.png` and `demo.webp` on the brand
 Intermediate renders stay in ignored `build/readme/`; each final image must be under 1.5 MB.
 Open all three outputs and check labels and circular crops. The existing banner and logos are separate brand assets.
 
+## Website
+
+`site/` is the static GitHub Pages site: HTML, CSS and vanilla JavaScript, with no analytics or external font
+requests. Edit the page directly; there is no framework build. Keep claims aligned with the README and code.
+
+Rebuild the images and check local links:
+
+```sh
+uv run python site/build.py
+uv run python site/check.py
+uv run ruff check
+uv run mypy
+```
+
+The image script uses `pixdial render --state busy --scale 4` with an isolated config and no sources. It creates
+real 1600 × 1600 renders for all 14 designs and three crown themes in ignored `build/site/renders/`. It encodes
+400/640/960/1280-pixel WebP variants, plus the 1600-pixel crown hero, without upscaling. The logo, SVG favicon and
+social preview come from `docs/images/`. The fitted ICO/32px/Apple icons and Space Grotesk Latin variable WOFF2
+are committed brand assets; the font's OFL is in `site/fonts/OFL.txt`. Rebuilding images needs no brand-kit path.
+Keep all published files below 4 MB and the initial browser load below 1 MB. Below-fold images should lazy-load.
+
+To preview with the same `/pixdial/` prefix as Pages, create a local server root (once) and serve it:
+
+```sh
+mkdir -p build/pages
+ln -s ../../site build/pages/pixdial
+python3 -m http.server 8765 --bind 127.0.0.1 --directory build/pages
+```
+
+Open `http://127.0.0.1:8765/pixdial/`. Check 390, 768, 1024 and 1440-pixel widths, keyboard focus, copy buttons,
+all 14 preview designs, pause/resume and reduced motion. Reduced motion stops automatic rotation and fades;
+previous/next still work. With JavaScript disabled, the first preview, full gallery, commands and FAQ remain usable.
+
+`.github/workflows/pages.yml` deploys committed `site/` files on matching pushes to `main` or manual dispatch.
+The deploy job skips private repositories. When the repository is public, enable **Settings → Pages → GitHub
+Actions** and run **Actions → Pages → Run workflow**. The production URL is
+`https://yordilorenzo.github.io/pixdial/`; publishing is separate from building or previewing locally.
+GitHub Pages project sites share the origin's `/robots.txt`; `site/robots.txt` records the intended policy and
+sitemap, but does not override that origin-wide file.
+
 ## Send a change
 
 1. Keep the change focused and explain what now works, with a reproduction for a fix.

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>pixdial | Hardware dashboards for Linux, built in Python</title>
+  <meta name="description" content="Put live hardware readings on your PC's LCD panels. Explore 14 designs, three themes and a Python SDK. Install pixdial from Git or preview without hardware.">
+  <meta name="theme-color" content="#070402">
+  <link rel="canonical" href="https://yordilorenzo.github.io/pixdial/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="pixdial">
+  <meta property="og:title" content="pixdial | Beautiful hardware dashboards. Yours to build.">
+  <meta property="og:description" content="A Python SDK and CLI for hardware screens on Linux. 14 designs, three themes and plugins for your own readings and displays.">
+  <meta property="og:url" content="https://yordilorenzo.github.io/pixdial/">
+  <meta property="og:image" content="https://yordilorenzo.github.io/pixdial/images/social-preview.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="640">
+  <meta property="og:image:alt" content="pixdial's amber mark and round CPU, GPU and PSU dashboards with demo readings">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="pixdial | Beautiful hardware dashboards. Yours to build.">
+  <meta name="twitter:description" content="A Python SDK and CLI for hardware screens on Linux. Explore 14 real designs and three themes.">
+  <meta name="twitter:image" content="https://yordilorenzo.github.io/pixdial/images/social-preview.png">
+  <meta name="twitter:image:alt" content="pixdial's amber mark and round CPU, GPU and PSU dashboards with demo readings">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" href="icon-32.png" type="image/png" sizes="32x32">
+  <link rel="icon" href="images/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
+  <link rel="preload" href="fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "pixdial",
+      "url": "https://yordilorenzo.github.io/pixdial/",
+      "description": "A Python SDK and CLI for hardware screens on Linux, with 14 built-in designs, three themes and plugins for designs, sources and devices.",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Linux",
+      "softwareRequirements": "Python 3.12 or newer; Git; uv. Physical panel support: Lian Li UNI FAN SL V3 Wireless LCD, USB 1cbe:0005.",
+      "downloadUrl": "https://github.com/YordiLorenzo/pixdial",
+      "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+      "isAccessibleForFree": true,
+      "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+      "image": "https://yordilorenzo.github.io/pixdial/images/social-preview.png"
+    }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header wrap">
+    <a class="brand" href="./" aria-label="pixdial home">
+      <img src="images/logo.svg" alt="pixdial" width="165" height="46">
+    </a>
+    <nav aria-label="Main navigation">
+      <a class="nav-designs" href="#designs">Designs</a>
+      <a href="#setup">Setup</a>
+      <a href="https://github.com/YordiLorenzo/pixdial/blob/main/docs/config.md">Docs</a>
+      <a class="nav-github" href="https://github.com/YordiLorenzo/pixdial">GitHub <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> OPEN SOURCE. ON YOUR MACHINE.</p>
+        <h1 id="hero-title">Beautiful hardware dashboards.<br><span>Yours to build.</span></h1>
+        <p class="hero-category">A Python SDK and CLI for hardware screens on Linux.</p>
+        <p class="hero-description">Put live readings on the LCDs in your PC. Pick a design, match your build, or write your own.</p>
+        <div class="install-command">
+          <span class="prompt" aria-hidden="true">$</span>
+          <code id="install-command">uv tool install 'git+https://github.com/YordiLorenzo/pixdial.git'</code>
+          <button class="copy-button" type="button" data-copy="install-command" aria-label="Copy install command" hidden>Copy</button>
+        </div>
+        <p class="requirements">Python 3.12+ <span aria-hidden="true">·</span> Git + <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> <span aria-hidden="true">·</span> Free, GPL-3.0-or-later</p>
+        <div class="hero-links">
+          <a class="button button-primary" href="#setup">Set up your panel <span aria-hidden="true">↗</span></a>
+          <a class="text-link" href="https://github.com/YordiLorenzo/pixdial">View on GitHub <span aria-hidden="true">↗</span></a>
+        </div>
+        <a class="compatibility-link" href="#hardware">For Lian Li UNI FAN SL V3 Wireless LCD <span aria-hidden="true">↓</span></a>
+      </div>
+      <div class="hero-visual">
+        <div class="orbit orbit-one" aria-hidden="true"></div>
+        <div class="orbit orbit-two" aria-hidden="true"></div>
+        <div class="dial-tick tick-top" aria-hidden="true">+</div>
+        <div class="dial-tick tick-bottom" aria-hidden="true">+</div>
+        <figure class="panel-preview" aria-label="Built-in designs with demo readings">
+          <div class="panel-bezel">
+            <div class="panel-screen" id="panel-screen">
+              <img class="panel-image" src="images/crown-640.webp"
+                   srcset="images/crown-400.webp 400w, images/crown-640.webp 640w, images/crown-960.webp 960w, images/crown-1280.webp 1280w, images/crown-1600.webp 1600w"
+                   sizes="(min-width: 1200px) 452px, (min-width: 900px) 370px, (min-width: 600px) 420px, calc(100vw - 84px)"
+                   width="1600" height="1600" fetchpriority="high"
+                   alt="Crown design showing CPU temperature, per-thread load, total load and package power with demo readings">
+            </div>
+          </div>
+          <figcaption>
+          <div class="preview-caption"><span id="design-name">crown</span><span class="demo-label">Demo readings</span></div>
+          <div class="preview-controls" id="preview-controls" hidden>
+            <button type="button" id="previous-design" aria-label="Previous design">←</button>
+            <span class="design-count" id="design-count">01 / 14</span>
+            <button type="button" id="next-design" aria-label="Next design">→</button>
+            <button type="button" class="pause-button" id="pause-designs" aria-label="Pause design rotation">Pause</button>
+          </div>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section designs-section" id="designs" aria-labelledby="designs-title">
+      <div class="wrap">
+        <div class="section-heading">
+          <div><p class="eyebrow">THE DESIGNS</p><h2 id="designs-title">A small screen.<br>A lot of possibilities.</h2></div>
+          <p>Fourteen designs for load, temperatures, power, time and more. Choose one per panel, or let them rotate.</p>
+        </div>
+        <div class="design-grid">
+          <figure><img src="images/crown-400.webp" srcset="images/crown-400.webp 400w, images/crown-640.webp 640w" sizes="(min-width: 1200px) 148px, (min-width: 700px) 160px, 42vw" width="400" height="400" loading="lazy" decoding="async" alt="Crown: a CPU temperature reading surrounded by per-thread load bars"><figcaption>crown</figcaption></figure>
+          <figure><img src="images/gpu-400.webp" srcset="images/gpu-400.webp 400w, images/gpu-640.webp 640w" sizes="(min-width: 1200px) 148px, (min-width: 700px) 160px, 42vw" width="400" height="400" loading="lazy" decoding="async" alt="GPU: board power, temperature, utilisation and connector pin readings"><figcaption>gpu</figcaption></figure>
+          <figure><img src="images/psu-400.webp" srcset="images/psu-400.webp 400w, images/psu-640.webp 640w" sizes="(min-width: 1200px) 148px, (min-width: 700px) 160px, 42vw" width="400" height="400" loading="lazy" decoding="async" alt="PSU: power output, temperature, fan speed and agent activity"><figcaption>psu</figcaption></figure>
+          <figure><img src="images/pins-400.webp" srcset="images/pins-400.webp 400w, images/pins-640.webp 640w" sizes="(min-width: 1200px) 148px, (min-width: 700px) 160px, 42vw" width="400" height="400" loading="lazy" decoding="async" alt="Pins: six connector current bars with total current and balance"><figcaption>pins</figcaption></figure>
+          <figure><img src="images/flow-400.webp" srcset="images/flow-400.webp 400w, images/flow-640.webp 640w" sizes="(min-width: 1200px) 148px, (min-width: 700px) 160px, 42vw" width="400" height="400" loading="lazy" decoding="async" alt="Flow: PSU output split into CPU, GPU and remaining system power"><figcaption>flow</figcaption></figure>
+          <figure><img src="images/quota-400.webp" srcset="images/quota-400.webp 400w, images/quota-640.webp 640w" sizes="(min-width: 1200px) 148px, (min-width: 700px) 160px, 42vw" width="400" height="400" loading="lazy" decoding="async" alt="Quota: an agent pool's remaining quota and working sessions"><figcaption>quota</figcaption></figure>
+          <figure><img src="images/history-400.webp" srcset="images/history-400.webp 400w, images/history-640.webp 640w" sizes="(min-width: 1200px) 148px, (min-width: 700px) 160px, 42vw" width="400" height="400" loading="lazy" decoding="async" alt="History: current PSU output above a two-minute power graph"><figcaption>history</figcaption></figure>
+          <figure><img src="images/twin-400.webp" srcset="images/twin-400.webp 400w, images/twin-640.webp 640w" sizes="(min-width: 1200px) 148px, (min-width: 700px) 160px, 42vw" width="400" height="400" loading="lazy" decoding="async" alt="Twin: concentric rings for GPU temperature and power"><figcaption>twin</figcaption></figure>
+          <figure><img src="images/clock-400.webp" srcset="images/clock-400.webp 400w, images/clock-640.webp 640w" sizes="(min-width: 1200px) 148px, (min-width: 700px) 160px, 42vw" width="400" height="400" loading="lazy" decoding="async" alt="Clock: time and date inside a ring showing system load"><figcaption>clock</figcaption></figure>
+          <figure><img src="images/minimal-400.webp" srcset="images/minimal-400.webp 400w, images/minimal-640.webp 640w" sizes="(min-width: 1200px) 148px, (min-width: 700px) 160px, 42vw" width="400" height="400" loading="lazy" decoding="async" alt="Minimal: a large CPU temperature reading"><figcaption>minimal</figcaption></figure>
+          <figure><img src="images/thermals-400.webp" srcset="images/thermals-400.webp 400w, images/thermals-640.webp 640w" sizes="(min-width: 1200px) 148px, (min-width: 700px) 160px, 42vw" width="400" height="400" loading="lazy" decoding="async" alt="Thermals: separate temperature rings for CPU, GPU and PSU"><figcaption>thermals</figcaption></figure>
+          <figure><img src="images/orb-400.webp" srcset="images/orb-400.webp 400w, images/orb-640.webp 640w" sizes="(min-width: 1200px) 148px, (min-width: 700px) 160px, 42vw" width="400" height="400" loading="lazy" decoding="async" alt="Orb: a coloured CPU load orb around a temperature reading"><figcaption>orb</figcaption></figure>
+          <figure><img src="images/radar-400.webp" srcset="images/radar-400.webp 400w, images/radar-640.webp 640w" sizes="(min-width: 1200px) 148px, (min-width: 700px) 160px, 42vw" width="400" height="400" loading="lazy" decoding="async" alt="Radar: CPU load plotted around a twelve-second circular sweep"><figcaption>radar</figcaption></figure>
+          <figure><img src="images/grid-400.webp" srcset="images/grid-400.webp 400w, images/grid-640.webp 640w" sizes="(min-width: 1200px) 148px, (min-width: 700px) 160px, 42vw" width="400" height="400" loading="lazy" decoding="async" alt="Grid: a dot for every CPU thread with temperature and total load"><figcaption>grid</figcaption></figure>
+        </div>
+        <p class="gallery-note">Demo readings throughout. PSU, connector currents and agent quota need <a href="https://github.com/YordiLorenzo/pixdial/blob/main/docs/config.md#sources">configured sources</a>.</p>
+        <div class="themes-row">
+          <div class="themes-copy"><p class="eyebrow">THREE THEMES</p><h3>Match your build.</h3><p>Warm, ember or ice. Set the theme for each panel.</p><code>pixdial show crown:ember</code></div>
+          <div class="theme-grid">
+            <figure><img src="images/crown-400.webp" srcset="images/crown-400.webp 400w, images/crown-640.webp 640w, images/crown-960.webp 960w, images/crown-1280.webp 1280w" sizes="(min-width: 900px) 200px, 27vw" width="1600" height="1600" loading="lazy" decoding="async" alt="Crown in warm, with cream text and green and orange thread bars"><figcaption><span class="swatch swatch-warm" aria-hidden="true"></span>warm</figcaption></figure>
+            <figure><img src="images/crown-ember-400.webp" srcset="images/crown-ember-400.webp 400w, images/crown-ember-640.webp 640w, images/crown-ember-960.webp 960w, images/crown-ember-1280.webp 1280w" sizes="(min-width: 900px) 200px, 27vw" width="1600" height="1600" loading="lazy" decoding="async" alt="Crown in ember, with warm orange and amber accents"><figcaption><span class="swatch swatch-ember" aria-hidden="true"></span>ember</figcaption></figure>
+            <figure><img src="images/crown-ice-400.webp" srcset="images/crown-ice-400.webp 400w, images/crown-ice-640.webp 640w, images/crown-ice-960.webp 960w, images/crown-ice-1280.webp 1280w" sizes="(min-width: 900px) 200px, 27vw" width="1600" height="1600" loading="lazy" decoding="async" alt="Crown in ice, with cool blue and cyan accents"><figcaption><span class="swatch swatch-ice" aria-hidden="true"></span>ice</figcaption></figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section wrap" id="setup" aria-labelledby="setup-title">
+      <div class="section-heading"><div><p class="eyebrow">FROM TERMINAL TO PANEL</p><h2 id="setup-title">Your first dashboard.</h2></div><p>Linux, Python 3.12+, Git and <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>. Install from Git; pixdial is not on PyPI yet.</p></div>
+      <ol class="setup-grid">
+        <li><span class="step-number" aria-hidden="true">01</span><h3>Install &amp; connect.</h3><p>Run the install command above. Apply the <a href="https://github.com/YordiLorenzo/pixdial#quick-start">USB permission rule</a>, then find your panel's serial.</p><pre><code>pixdial devices</code></pre></li>
+        <li><span class="step-number" aria-hidden="true">02</span><h3>Choose your design.</h3><p>Save <code>~/.config/pixdial/config.toml</code> with your panel's serial in place of <code>YOUR_PANEL_SERIAL</code>.</p><pre><code>layout = ["crown"]
+
+[[panels]]
+name = "cpu"
+serial = "YOUR_PANEL_SERIAL"</code></pre></li>
+        <li><span class="step-number" aria-hidden="true">03</span><h3>Check &amp; run.</h3><p>Check permissions and readings, then start the panel. Ctrl-C stops pixdial and turns the panel dark.</p><pre><code>pixdial doctor
+pixdial run</code></pre><a class="text-link" href="https://github.com/YordiLorenzo/pixdial/blob/main/docs/config.md">Configuration guide <span aria-hidden="true">↗</span></a></li>
+      </ol>
+      <div class="preview-callout"><div><h3>No panel yet?</h3><p>Render a preview from demo readings. No hardware needed.</p></div><pre><code>pixdial render crown --state busy --out preview</code></pre></div>
+    </section>
+
+    <section class="section sdk-section" id="build" aria-labelledby="sdk-title">
+      <div class="wrap sdk-layout">
+        <div class="sdk-copy"><p class="eyebrow">THE PYTHON SDK</p><h2 id="sdk-title">Your data.<br>Your design.</h2><p>A design turns a snapshot of readings into a picture. pixdial handles sampling, layout changes and delivery to the panel.</p><div class="extension-list"><p><strong>Designs</strong><span>Draw a different view.</span></p><p><strong>Sources</strong><span>Bring your own readings.</span></p><p><strong>Devices</strong><span>Send frames to another display.</span></p></div><a class="text-link" href="https://github.com/YordiLorenzo/pixdial/blob/main/docs/plugins.md">Build a Python plugin <span aria-hidden="true">↗</span></a></div>
+        <div class="code-window"><div class="code-title"><span>demo.py</span><span>Python</span></div><pre><code><span class="syntax-keyword">from</span> pixdial.designs <span class="syntax-keyword">import</span> LOAD, THEMES, Design
+<span class="syntax-keyword">from</span> pixdial.readings <span class="syntax-keyword">import</span> Reading, Snapshot
+
+
+<span class="syntax-keyword">class</span> <span class="syntax-name">Load</span>(Design):
+    name = <span class="syntax-string">"load"</span>
+    shows = <span class="syntax-string">"CPU load on a gauge"</span>
+
+    <span class="syntax-keyword">def</span> <span class="syntax-name">update</span>(self, readings, now, dt):
+        self.value = readings.number(<span class="syntax-string">"cpu_load"</span>)
+        <span class="syntax-keyword">return</span> self.value, <span class="syntax-keyword">None</span>
+
+    <span class="syntax-keyword">def</span> <span class="syntax-name">still</span>(self):
+        frame = self.frame(self.colour(LOAD, self.value))
+        self.gauge(frame, self.value, LOAD)
+        self.label(frame, <span class="syntax-string">"CPU LOAD"</span>)
+        frame.number(246, self.value, <span class="syntax-string">"%"</span>)
+        <span class="syntax-keyword">return</span> frame.finish()
+
+
+design = Load(THEMES[<span class="syntax-string">"warm"</span>])
+readings = Snapshot({<span class="syntax-string">"cpu_load"</span>: Reading(42, <span class="syntax-string">"%"</span>)}, wall=0)
+design.update(readings, now=0, dt=0)
+design.render(now=0).save(<span class="syntax-string">"demo.png"</span>)</code></pre><p class="code-footer">In a <a href="https://github.com/YordiLorenzo/pixdial#development">source checkout</a>, save as <code>demo.py</code> and run <code>uv run python demo.py</code>.</p></div>
+      </div>
+      <div class="wrap cli-row"><h3>At the command line.</h3><dl><div><dt><code>pixdial show crown:ember</code></dt><dd>Change the running panel.</dd></div><div><dt><code>pixdial show rotate</code></dt><dd>Cycle through designs.</dd></div><div><dt><code>pixdial list</code></dt><dd>See designs, themes and plugins.</dd></div></dl></div>
+    </section>
+
+    <section class="section wrap" id="hardware" aria-labelledby="hardware-title">
+      <div class="section-heading"><div><p class="eyebrow">SUPPORTED HARDWARE</p><h2 id="hardware-title">One panel. Built for it.</h2></div><p>The Lian Li UNI FAN SL V3 Wireless LCD is the only supported physical device today.</p></div>
+      <div class="hardware-table"><table><thead><tr><th scope="col">Panel</th><th scope="col">USB ID</th><th scope="col">Display</th><th scope="col">OS</th></tr></thead><tbody><tr><th scope="row">Lian Li UNI FAN SL V3 Wireless LCD</th><td><code>1cbe:0005</code></td><td>Round, 400 × 400</td><td>Linux</td></tr></tbody></table></div>
+      <p class="hardware-note">The LCD receives frames over USB. Other panels and AIO screens need tested <a href="https://github.com/YordiLorenzo/pixdial/blob/main/docs/plugins.md#devices">device plugins</a>. pixdial does not control fan speed or RGB lighting.</p>
+      <div class="boundaries"><h3>What pixdial touches.</h3><div><p>The driver sends queries, frame-rate setup, JPEG frames and brightness over USB. No firmware writes, reboots or storage commands.</p><p>Built-in readers use local files or NVML. No telemetry or network service. Configured commands and plugins run with your permissions and can use the network.</p><a class="text-link" href="https://github.com/YordiLorenzo/pixdial/blob/main/SECURITY.md">Security and boundaries <span aria-hidden="true">↗</span></a></div></div>
+    </section>
+
+    <section class="section faq-section" id="faq" aria-labelledby="faq-title">
+      <div class="wrap faq-layout"><div><p class="eyebrow">A FEW DETAILS</p><h2 id="faq-title">Before you plug in.</h2></div><div class="faq-list">
+        <details><summary>Can I try pixdial without a panel?</summary><p>Yes. <code>pixdial render crown --out preview</code> writes a PNG from demo readings. Rendering works on Linux and macOS. For a live preview, use the <a href="https://github.com/YordiLorenzo/pixdial/blob/main/docs/config.md#try-a-live-layout-without-hardware">PNG device</a>. Physical panels are supported on Linux only.</p></details>
+        <details><summary>Which readings are built in?</summary><p>CPU load, RAPL package power, NVIDIA GPU readings and CPU temperature via Linux hardware sensors. Availability depends on your hardware, drivers and permissions. PSU readings, connector currents and agent quota need configured sources.</p><p>Run <code>pixdial doctor</code> to check each source. Missing or stale measurements show a dash.</p></details>
+        <details><summary>Does pixdial need root?</summary><p>pixdial runs as your user. Installing the <a href="https://github.com/YordiLorenzo/pixdial#quick-start">udev rule</a> needs administrator access and grants the active local user access to the panel. RAPL counters can need separate read permission. For a headless server, use the documented <a href="https://github.com/YordiLorenzo/pixdial/blob/main/docs/config.md#usb-permissions">group rule</a>.</p></details>
+        <details><summary>How does this relate to lian-li-linux?</summary><p><a href="https://github.com/sgtaziz/lian-li-linux">sgtaziz/lian-li-linux</a> already drives these screens on Linux and offers presets, templates and a layout editor under the MIT licence. pixdial follows its SL V3 protocol implementation and focuses on supplied designs and Python plugins.</p><p>Use only one program per panel so they do not compete for the USB interface.</p></details>
+        <details><summary>Can I add a design, reading or display?</summary><p>Yes. Python entry points register designs, sources and devices. The <a href="https://github.com/YordiLorenzo/pixdial/tree/main/examples/plugin">example plugin</a> includes all three. New physical displays need a device plugin and hardware testing; other resolutions also need rendering support.</p></details>
+      </div></div>
+    </section>
+
+    <section class="section final-cta wrap" aria-labelledby="install-title">
+      <img src="images/icon.svg" alt="" width="64" height="64" loading="lazy">
+      <h2 id="install-title">Make the screen yours.</h2>
+      <div class="install-command"><span class="prompt" aria-hidden="true">$</span><code id="install-command-footer">uv tool install 'git+https://github.com/YordiLorenzo/pixdial.git'</code><button class="copy-button" type="button" data-copy="install-command-footer" aria-label="Copy install command" hidden>Copy</button></div>
+      <div class="final-links"><a class="text-link" href="#setup">Setup guide <span aria-hidden="true">↑</span></a><a class="text-link" href="https://github.com/YordiLorenzo/pixdial">GitHub <span aria-hidden="true">↗</span></a></div>
+    </section>
+  </main>
+
+  <footer class="site-footer wrap">
+    <div class="footer-top"><a class="brand" href="./" aria-label="pixdial home"><img src="images/logo.svg" alt="pixdial" width="144" height="40" loading="lazy"></a><nav aria-label="Footer navigation"><a href="https://github.com/YordiLorenzo/pixdial/blob/main/LICENSE">GPL-3.0-or-later</a><a href="https://github.com/YordiLorenzo/pixdial/blob/main/CHANGELOG.md">Changelog</a><a href="https://github.com/YordiLorenzo/pixdial/issues">Issues</a></nav></div>
+    <p>SL V3 protocol based on <a href="https://github.com/sgtaziz/lian-li-linux">sgtaziz/lian-li-linux</a> v1.2.4, <code>slv3_lcd.rs</code> and <code>crypto.rs</code>.</p>
+    <p>Rendered with <a href="https://python-pillow.org/">Pillow</a> and <a href="https://numpy.org/">NumPy</a>. Space Grotesk by Florian Karsten, <a href="fonts/OFL.txt">SIL OFL</a>. Dashboard type: <a href="https://www.latofonts.com/">Lato</a> by Łukasz Dziedzic, <a href="https://github.com/YordiLorenzo/pixdial/blob/main/src/pixdial/fonts/LICENSE-Lato.txt">SIL OFL</a>.</p>
+    <p>pixdial is not affiliated with Lian Li or the hardware manufacturers named here.</p>
+  </footer>
+  <p class="sr-only" role="status" id="copy-status" aria-live="polite"></p>
+</body>
+</html>

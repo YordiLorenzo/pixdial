@@ -63,7 +63,7 @@ ignore = [
 [tool.mypy]
 strict = true
 python_version = "3.12"
-files = ["src", "tests", "examples/plugin"]
+files = ["src", "tests", "examples/plugin", "site"]
 
 disable_error_code = ["type-abstract"]  # a plugin kind's abstract base class names what it must subclass
 

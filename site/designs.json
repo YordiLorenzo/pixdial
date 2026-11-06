@@ -1,0 +1,58 @@
+[
+  {
+    "name": "crown",
+    "alt": "CPU: temperature, every thread's load, total load, package power"
+  },
+  {
+    "name": "gpu",
+    "alt": "GPU: board power of its power limit, temperature, use, the power connector's pins"
+  },
+  {
+    "name": "psu",
+    "alt": "PSU DC output of its rating, PSU temperature and fan, an agent pool's quota and sessions"
+  },
+  {
+    "name": "pins",
+    "alt": "GPU power connector: each pin's current, the total current and power, balance"
+  },
+  {
+    "name": "flow",
+    "alt": "PSU output split into CPU package, GPU board and the rest (board, RAM, drives, fans)"
+  },
+  {
+    "name": "quota",
+    "alt": "An agent pool's quota left, agent sessions working, a wait for you"
+  },
+  {
+    "name": "history",
+    "alt": "PSU DC output now and over the last two minutes, on the PSU's rating"
+  },
+  {
+    "name": "twin",
+    "alt": "GPU temperature (outer ring, against its slowdown point) and power (inner, of its limit)"
+  },
+  {
+    "name": "clock",
+    "alt": "The time and date, the system load (the higher of CPU and GPU), a seconds comet"
+  },
+  {
+    "name": "minimal",
+    "alt": "CPU temperature only"
+  },
+  {
+    "name": "thermals",
+    "alt": "CPU, GPU and PSU temperature, each against its own limit"
+  },
+  {
+    "name": "orb",
+    "alt": "CPU load (colour and speed) and temperature"
+  },
+  {
+    "name": "radar",
+    "alt": "CPU load now and over the last sweep (12 s)"
+  },
+  {
+    "name": "grid",
+    "alt": "CPU: every thread's load as a dot, temperature and total load"
+  }
+]

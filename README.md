@@ -13,7 +13,7 @@
 Pick from 14 designs for CPU load, temperatures, power, a clock and more. Match them to your build with three
 themes, or write a design of your own. pixdial draws each frame on the host and sends it over USB.
 
-[Quick start](#quick-start) · [Supported hardware](#supported-hardware) · [Build a design](#build-a-design)
+[Website](https://yordilorenzo.github.io/pixdial/) · [Quick start](#quick-start) · [Supported hardware](#supported-hardware) · [Build a design](#build-a-design)
 
 ![All 14 built-in designs in the warm theme, rendered with demo readings](docs/images/designs.png)
 

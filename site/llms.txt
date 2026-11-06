@@ -1,0 +1,32 @@
+# pixdial
+
+> A Python SDK and CLI for hardware screens on Linux. Free software under GPL-3.0-or-later.
+
+pixdial draws live hardware readings on round LCD panels. It includes 14 designs,
+three themes (warm, ember and ice), and Python plugins for designs, sources and devices.
+The only supported physical panel is the Lian Li UNI FAN SL V3 Wireless LCD,
+USB 1cbe:0005, 400 × 400 pixels, on Linux. It does not control fan speed or RGB lighting.
+
+Requires Python 3.12+, Git and uv. Install from Git, not PyPI:
+
+    uv tool install 'git+https://github.com/YordiLorenzo/pixdial.git'
+
+`pixdial render crown --out preview` produces a demo PNG without hardware,
+including on macOS. Website images show demo readings. PSU readings, connector
+currents and agent quota require configured sources.
+
+Built-in sensor readers use local files or NVML. No telemetry or network service.
+Configured commands and plugins can use the network and run with the user's permissions.
+
+The SL V3 protocol follows sgtaziz/lian-li-linux v1.2.4, an existing MIT-licensed
+alternative with presets, templates and a layout editor. Use only one program per panel.
+pixdial is not affiliated with Lian Li.
+
+## Links
+
+- [Website](https://yordilorenzo.github.io/pixdial/)
+- [Source and quick start](https://github.com/YordiLorenzo/pixdial)
+- [Configuration](https://github.com/YordiLorenzo/pixdial/blob/main/docs/config.md)
+- [Plugin guide](https://github.com/YordiLorenzo/pixdial/blob/main/docs/plugins.md)
+- [Security](https://github.com/YordiLorenzo/pixdial/blob/main/SECURITY.md)
+- [Protocol reference and alternative](https://github.com/sgtaziz/lian-li-linux)
