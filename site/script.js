@@ -57,9 +57,10 @@ async function startPreview() {
   }
 
   function updatePause() {
-    pause.textContent = motion.matches ? "Still" : paused ? "Play" : "Pause";
-    pause.disabled = motion.matches;
-    pause.setAttribute("aria-label", motion.matches ? "Rotation stopped for reduced motion" : paused ? "Resume design rotation" : "Pause design rotation");
+    // Reduced motion never rotates, so there is nothing to pause.
+    pause.hidden = motion.matches;
+    pause.textContent = paused ? "Play" : "Pause";
+    pause.setAttribute("aria-label", paused ? "Resume design rotation" : "Pause design rotation");
   }
 
   async function show(target, automatic = false) {
@@ -71,7 +72,7 @@ async function startPreview() {
     const old = screen.querySelector("img");
     const incoming = new Image(1600, 1600);
     incoming.className = "panel-image incoming";
-    incoming.alt = `${design.name}: ${design.alt}, with demo readings`;
+    incoming.alt = `The ${design.name} design (${design.alt}), with demo readings`;
     incoming.sizes = old.sizes;
     incoming.srcset = [400, 640, 960, 1280].map((width) => `images/${design.name}-${width}.webp ${width}w`).join(", ");
     incoming.src = `images/${design.name}-640.webp`;
