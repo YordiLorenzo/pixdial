@@ -4,6 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/YordiLorenzo/pixdial/actions/workflows/ci.yml"><img src="https://github.com/YordiLorenzo/pixdial/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://pypi.org/project/pixdial/"><img src="https://img.shields.io/pypi/v/pixdial?color=FF9632" alt="PyPI version"></a>
   <a href="pyproject.toml"><img src="https://img.shields.io/badge/Python-3.12%2B-FFDAB2" alt="Python 3.12 or newer"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-GPL--3.0--or--later-FF9632" alt="GPL-3.0-or-later"></a>
 </p>
