@@ -1,0 +1,5 @@
+# Lets the user logged in at the machine use Lian Li UNI FAN SL V3 Wireless LCD panels (USB 1cbe:0005) without root.
+# Install: sudo cp 60-pixdial.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
+# On a machine nobody logs in to locally, give a group access instead: replace TAG+="uaccess" with
+# GROUP="<group>", MODE="0660" and add the user to that group.
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1cbe", ATTRS{idProduct}=="0005", TAG+="uaccess"

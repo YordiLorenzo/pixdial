@@ -1,0 +1,18 @@
+[project]
+name = "pixdial-example"
+version = "0.1.0"
+dependencies = ["pixdial"]
+
+# pixdial finds these by name once the package is installed: `type = "loadavg"`, `device = "folder"`, `show big`
+[project.entry-points."pixdial.designs"]
+big = "pixdial_example:Big"
+
+[project.entry-points."pixdial.sources"]
+loadavg = "pixdial_example:LoadAverage"
+
+[project.entry-points."pixdial.devices"]
+folder = "pixdial_example:Folder"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

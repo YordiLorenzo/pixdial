@@ -1,0 +1,254 @@
+"""The runtime's timing, on a fake clock: when frames go out, how often the still part is drawn, rotation, fades,
+retries, resume from sleep and layout changes."""
+
+from __future__ import annotations
+
+import itertools
+import threading
+from pathlib import Path
+
+import numpy as np
+import pytest
+from PIL import Image
+
+from pixdial.designs import BUILTIN, THEMES, Eased, Still
+from pixdial.devices import Device
+from pixdial.readings import Reading
+from pixdial.runtime import Catalog, Feed, Layout, Report, Runner, Sampler, Screen
+from pixdial.runtime.runner import FAST, SLOW
+from pixdial.sources import Source
+
+
+class Clock:
+    def __init__(self) -> None:
+        self.now, self.asleep, self.epoch = 1000.0, 0.0, 1_800_000_000.0
+
+    def monotonic(self) -> float:
+        return self.now
+
+    def boottime(self) -> float:
+        return self.now + self.asleep
+
+    def wall(self) -> float:
+        return self.epoch + self.now
+
+
+class Panel(Device):
+    def __init__(self, fails: int = 0) -> None:
+        self.fails, self.opens, self.closes = fails, 0, 0
+        self.frames: list[tuple[float, Image.Image]] = []
+        self.dark = False
+        self.clock: Clock | None = None
+
+    def open(self) -> str:
+        self.opens += 1
+        if self.fails:
+            self.fails -= 1
+            raise OSError("busy")
+        return "fake"
+
+    def show(self, image: Image.Image) -> None:
+        assert self.clock is not None
+        self.frames.append((self.clock.now, image))
+
+    def off(self) -> None:
+        self.dark = True
+
+    def close(self) -> None:
+        self.closes += 1
+
+
+class Fixed(Source):
+    """Stands for the sources; the rig sets what it read."""
+
+    def read(self) -> dict[str, Reading]:
+        return {}
+
+
+class Rig:
+    """A runner with fake panels on a fake clock; the readings are set by hand."""
+
+    def __init__(self, tmp_path: Path, designs: tuple[str, ...], panels: list[Panel] | None = None) -> None:
+        self.clock = Clock()
+        self.lines: list[str] = []
+        self.readings: dict[str, float] = {}
+        report = Report(self.lines.append)
+        self.panels = panels or [Panel() for _ in designs]
+        for panel in self.panels:
+            panel.clock = self.clock
+        catalog = Catalog(BUILTIN, THEMES, "warm")
+        self.layout = Layout(catalog, len(self.panels), tmp_path / "layout", designs, list(BUILTIN), 60)
+        self.sampler = Sampler([("readings", Fixed())], report, self.clock.monotonic)
+        screens = [Screen(str(i), p, report) for i, p in enumerate(self.panels)]
+        feed = Feed({}, {spec for cls in BUILTIN.values() for spec in cls.trails})
+        self.runner = Runner(screens, self.sampler, feed, catalog, self.layout, report, self.clock)  # type: ignore[arg-type]
+
+    def set(self, **values: float) -> None:
+        """Readings the sources keep reporting."""
+        self.readings = values
+        self.sample()
+
+    def sample(self) -> None:
+        self.sampler.values = [{k: (Reading(v), self.clock.now) for k, v in self.readings.items()}]
+
+    def run_for(self, seconds: float) -> list[float]:
+        """Ticks for that long, as the loop would; returns the delays."""
+        delays, end = [], self.clock.now + seconds
+        while self.clock.now < end - 1e-9:
+            self.sample()
+            delay = self.runner.tick()
+            delays.append(delay)
+            self.clock.now += delay
+        return delays
+
+
+def test_a_still_screen_sends_once_then_every_30_s(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("minimal",))
+    rig.set(cpu_c=40)
+    delays = rig.run_for(65)
+    sent = [t - 1000 for t, _ in rig.panels[0].frames]
+    assert sent == pytest.approx([0, 30, 60], abs=0.11)
+    assert delays == pytest.approx([SLOW] * len(delays))
+
+
+def test_an_animation_runs_at_30_frames_a_second(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("psu",))
+    rig.set(psu_w=300, working=2)
+    delays = rig.run_for(2)
+    assert delays == pytest.approx([FAST] * len(delays))
+    assert len(rig.panels[0].frames) == pytest.approx(60, abs=1)
+
+
+def test_the_still_part_is_drawn_at_most_10_times_a_second(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    rig = Rig(tmp_path, ("psu",))
+    rig.set(psu_w=100, working=1)
+    rig.runner.tick()
+    design = rig.runner.screens[0].design
+    assert design is not None
+    draws: list[float] = []
+    still = design.still
+
+    def counted() -> Still:
+        draws.append(rig.clock.now)
+        return still()
+
+    monkeypatch.setattr(design, "still", counted)
+    for i in range(60):  # 2 s at 30 frames a second, the watts changing every frame
+        rig.clock.now += FAST
+        rig.set(psu_w=100 + 20 * i, working=1)
+        rig.runner.tick()
+    gaps = [b - a for a, b in itertools.pairwise(draws)]
+    assert len(draws) >= 10 and min(gaps) >= 0.1 - 1e-9
+
+
+def test_rotation_steps_every_panel_each_minute_without_repeats(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("crown", "gpu", "psu"))
+    rig.layout.save(["rotate"])
+    rig.clock.epoch -= rig.clock.wall() % 60 - 1  # a second past the minute
+    rig.runner.tick()
+    first = [s.spec for s in rig.runner.screens]
+    assert len(set(first)) == 3
+    rig.run_for(58.5)
+    assert [s.spec for s in rig.runner.screens] == first
+    delays = rig.run_for(1.0)
+    second = [s.spec for s in rig.runner.screens]
+    assert all(a != b for a, b in zip(first, second, strict=True)) and len(set(second)) == 3
+    assert min(delays) == pytest.approx(FAST)  # fading in
+
+
+def test_a_new_design_fades_in_over_the_last_frame(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("minimal",))
+    rig.set(cpu_c=40)
+    rig.run_for(1)
+    rig.layout.save(["crown:ice"])
+    rig.clock.now += 0.01
+    frames = len(rig.panels[0].frames)
+    delays = rig.run_for(0.6)
+    faded = rig.panels[0].frames[frames:]
+    assert 11 <= len(faded) <= 14  # 0.4 s at 30 frames a second, then none: crown is still
+    assert delays[0] == pytest.approx(FAST) and delays[-1] == pytest.approx(SLOW)
+
+
+def test_a_panel_that_will_not_open_is_tried_every_10_s(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("minimal",), [Panel(fails=2)])
+    rig.set(cpu_c=40)
+    rig.run_for(25)
+    assert rig.panels[0].opens == 3
+    assert rig.panels[0].frames and rig.panels[0].frames[0][0] == pytest.approx(1020, abs=0.11)
+    assert [line for line in rig.lines if "panel" in line] == ["0 panel: busy", "0 panel: working, info fake"]
+
+
+def test_a_resume_reopens_the_panels_and_resets_the_sources(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("minimal",))
+    rig.set(cpu_c=40)
+    rig.run_for(1)
+    rig.clock.asleep += 3600
+    rig.runner.tick()
+    assert rig.panels[0].closes == 1 and rig.panels[0].opens == 2
+    assert rig.sampler.resets == [True]
+
+
+def test_a_bad_layout_file_keeps_the_designs(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("minimal",))
+    rig.run_for(1)
+    (tmp_path / "layout").write_text("crown nope\n")
+    rig.run_for(1)
+    assert rig.runner.screens[0].spec == "minimal"
+    assert sum("layout:" in line and "nope" in line for line in rig.lines) == 1
+
+
+def test_stale_readings_go_missing(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("minimal",))
+    rig.set(cpu_c=40)
+    assert rig.sampler.fresh(rig.clock.now + 4.9)
+    assert not rig.sampler.fresh(rig.clock.now + 5.0)
+
+
+def test_the_panels_go_dark_when_it_stops(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("minimal",))
+    stop = threading.Event()
+    rig.runner.tick()
+    stop.set()
+    rig.runner.run(stop)
+    assert rig.panels[0].dark
+
+
+def test_a_series_that_changes_length_starts_over() -> None:
+    eased = Eased(1)
+    eased.step(np.zeros(48), 0.1)
+    assert eased.step(np.ones(47), 0.1) is not None and eased.value.shape == (47,)  # type: ignore[union-attr]
+
+
+def test_a_failing_design_stops_only_its_own_panel(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    rig = Rig(tmp_path, ("minimal", "crown"))
+    rig.set(cpu_c=40)
+    rig.runner.tick()
+    broken = rig.runner.screens[0].design
+
+    def update(r: object, now: float, dt: float) -> tuple[object, object]:
+        raise ValueError("a reading it can't draw")
+
+    monkeypatch.setattr(broken, "update", update)
+    sent = len(rig.panels[1].frames)
+    rig.run_for(31)  # past a resend
+    assert len(rig.panels[1].frames) > sent
+    assert sum("0 design minimal" in line for line in rig.lines) == 1
+
+
+def test_a_design_that_fails_halfway_is_drawn_afresh(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    rig = Rig(tmp_path, ("minimal",))
+    rig.set(cpu_c=40)
+    rig.runner.screens[0].use("minimal", rig.runner.catalog.make)
+    design = rig.runner.screens[0].design
+    fails = [1]
+    moving = design.moving
+
+    def flaky(px: object, now: float) -> None:
+        if fails[0]:
+            fails[0] -= 1
+            raise ValueError("halfway")
+        moving(px, now)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(design, "moving", flaky)
+    rig.run_for(0.3)
+    assert len(rig.panels[0].frames) == 1  # the second tick drew it whole and sent it

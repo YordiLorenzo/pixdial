@@ -1,0 +1,16 @@
+# A systemd user unit for `pixdial run`. Install:
+#   mkdir -p ~/.config/systemd/user && cp pixdial.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now pixdial
+# ExecStart assumes `uv tool install` or `pipx install` (~/.local/bin); point it at your pixdial otherwise.
+# To keep it running while you are logged out: loginctl enable-linger
+[Unit]
+Description=pixdial: live dashboards on the fans' LCD panels
+
+[Service]
+ExecStart=%h/.local/bin/pixdial run
+Restart=always
+RestartSec=10
+Nice=10
+
+[Install]
+WantedBy=default.target
