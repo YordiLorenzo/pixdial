@@ -13,8 +13,9 @@ LOG = logging.getLogger(NAME)
 
 class Report:
     """report(what, error): a warning when something breaks or breaks differently, and a line when it works again;
-    report(what, **info): a line with news about it (a panel's firmware, the designs shown). An error is an exception
-    (an OSError by its message, anything else with its type; with its traceback when debugging) or text."""
+    report(what, **info): a line with news about it (a panel's firmware, the designs shown). An error is text or an
+    exception: an OSError or a ValueError (which says what it read) by its message, anything else with its type;
+    with its traceback when debugging."""
 
     def __init__(self, log: logging.Logger = LOG) -> None:
         self.log = log
@@ -25,7 +26,9 @@ class Report:
             if self.faults.pop(what, None) or info:
                 self.log.info(f"{what}: working" + "".join(f", {k} {v}" for k, v in info.items()))
             return
-        text = error if isinstance(error, str) else str(error) if isinstance(error, OSError) else repr(error)
+        text = (
+            error if isinstance(error, str) else str(error) if isinstance(error, OSError | ValueError) else repr(error)
+        )
         if self.faults.get(what) != text:
             self.faults[what] = text
             trace = error if isinstance(error, BaseException) and self.log.isEnabledFor(logging.DEBUG) else None

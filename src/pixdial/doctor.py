@@ -197,8 +197,10 @@ def share(path: Path | None) -> str:
     attached = Slv3.discover()
     try:
         configured = [str(e.options.get("serial", "")) for e in cfg.load(path).panels]
-    except cfg.ConfigError:
-        configured = []
+    except cfg.ConfigError:  # its error can quote a panel's table, serial and all
+        where = path or cfg.config_path()
+        text = where.read_text() if where.is_file() else ""
+        configured = re.findall(r"""serial\s*=\s*["']([^"']+)["']""", text)
     given = {key for c in done for key in c.readings}
     raqm = "yes" if features.check_feature("raqm") else "no"
     other = others()

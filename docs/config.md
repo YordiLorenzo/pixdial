@@ -120,8 +120,8 @@ there is no critical limit). Configure the names your Linux drivers expose; ther
 The `amdgpu` source is experimental: it is tested on copies of the driver's files, not yet on a Radeon card.
 It gives `gpu_c` (the edge temperature, limit: the card's critical temperature), `gpu_w` (`power1_average`, or
 `power1_input` on kernels that give only that, limit: the power cap), `gpu_use` and `gpu_vram` (VRAM in use in
-GiB, limit: the total). With several AMD GPUs it reads the one with the most VRAM. On a processor's built-in GPU,
-`gpu_w` is the power of the whole chip. Without an AMD GPU it gives nothing and logs nothing. It looks for the
+GiB, limit: the total). With several AMD GPUs it reads the one with the most VRAM. On a processor's built-in GPU
+(an APU) it leaves out `gpu_w`, because that power is the whole chip's, CPU included. Without an AMD GPU it gives nothing and logs nothing. It looks for the
 GPU on every read, so a card whose driver loads after pixdial starts is found. It comes before `nvml` in the
 default list, so on a PC with an NVIDIA card and a processor's built-in AMD GPU, the NVIDIA readings win.
 

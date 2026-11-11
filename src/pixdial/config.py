@@ -185,7 +185,15 @@ def layout(config: Config, catalog: Catalog, built: Sequence[tuple[str, Source]]
     """The layout; built: the config's sources, where they are built already (a plugin's may hold a device)."""
     names = list(catalog.designs)
     if not (config.rotation and config.layout):
-        left_out = skipped(catalog, sources(config) if built is None else built)
+        if built is None:  # built here only to ask what they give: closed, as a plugin's may hold a device
+            temporary = sources(config)
+            try:
+                left_out = skipped(catalog, temporary)
+            finally:
+                for _, source in temporary:
+                    source.close()
+        else:
+            left_out = skipped(catalog, built)
         names = [name for name in names if name not in left_out]
     rotation = config.rotation or tuple(names)
     for name in rotation:

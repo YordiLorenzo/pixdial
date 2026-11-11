@@ -15,7 +15,8 @@ GIB = 2**30
 
 class Amdgpu(Source):
     """gpu_c: the edge temperature, its limit the crit the card reports; gpu_w: power (power1_average, or
-    power1_input where the kernel gives only that; on a processor's built-in GPU the whole chip's), its limit the
+    power1_input where the kernel gives only that; left out on a processor's built-in GPU, whose power is the whole
+    chip's, CPU included), its limit the
     power cap; gpu_use: gpu_busy_percent (%); gpu_vram: VRAM in use (GiB), its limit the total. Each is left out
     where the GPU doesn't report it. With several AMD GPUs it reads the one with the most VRAM, so a graphics card
     wins over the processor's GPU. With none it gives nothing, and no error. It looks for the GPU on every read:
@@ -77,6 +78,8 @@ def temperature(device: Path, sensors: Path | None) -> Reading | None:
 
 def power(device: Path, sensors: Path | None) -> Reading | None:
     if sensors is None:
+        return None
+    if (sensors / "in1_input").exists():  # vddnb, which amdgpu shows only on an APU: its power is the CPU's too
         return None
     w = value(sensors / "power1_average", 1e6)
     w = value(sensors / "power1_input", 1e6) if w is None else w

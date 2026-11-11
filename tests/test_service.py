@@ -103,3 +103,9 @@ def test_a_path_with_a_space_or_a_percent_stays_one_argument() -> None:
     assert service.quoted("/home/u/panel configs/config.toml") == '"/home/u/panel configs/config.toml"'
     assert service.quoted("/home/u/100%/a$b") == "/home/u/100%%/a$$b"
     assert service.quoted('/home/u/a "b"\\c') == '"/home/u/a \\"b\\"\\\\c"'
+
+
+def test_python_m_pixdial_gets_a_unit_that_runs_the_same_interpreter(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sys, "argv", ["/venv/lib/python3.14/site-packages/pixdial/__main__.py", "service", "install"])
+    start = next(line for line in service.unit(None).splitlines() if line.startswith("ExecStart="))
+    assert start == f"ExecStart={sys.executable} -m pixdial run"

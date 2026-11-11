@@ -391,7 +391,7 @@ def test_a_device_error_other_than_oserror_stops_only_its_own_panel(tmp_path: Pa
     rig.set(cpu_c=40)
     rig.run_for(31)  # past a resend
     assert len(rig.panels[1].frames) == 2
-    assert "0 panel: ValueError('frame too big')" in rig.lines
+    assert "0 panel: frame too big" in rig.lines
 
 
 def test_a_series_on_a_trail_key_leaves_a_gap(tmp_path: Path) -> None:

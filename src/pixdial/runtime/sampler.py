@@ -51,7 +51,7 @@ class Sampler:
         try:
             readings = source.read()
         except Exception as error:  # a broken source must not stop the others
-            self.report(name, str(error) if isinstance(error, ValueError) else error)  # a ValueError says what it read
+            self.report(name, error)
             return
         self.report(name)
         now = self.clock()

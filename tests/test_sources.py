@@ -325,3 +325,10 @@ def test_a_reading_begun_before_a_sleep_is_dropped_and_the_source_reset() -> Non
     finally:
         sampler.stop()
         source.done.set()
+
+
+def test_amdgpu_leaves_out_an_apus_power_which_holds_the_cpus(tmp_path: Path) -> None:
+    card(
+        tmp_path / "drm", 0, "amdgpu", {"gpu_busy_percent": "5", **vram(0.5, 0.5)}, {**RX6800_HWMON, "in1_input": "900"}
+    )
+    assert set(Amdgpu(str(tmp_path / "drm")).read()) == {"gpu_c", "gpu_use", "gpu_vram"}

@@ -23,7 +23,8 @@ def path() -> Path:
 def unit(config: Path | None) -> str:
     """The bundled unit with ExecStart pointed at this pixdial (a uv tool, pipx, AUR or Nix install each puts it
     somewhere else), and at the config it was given."""
-    command = [str(Path(sys.argv[0]).resolve())]
+    run = Path(sys.argv[0])
+    command = [sys.executable, "-m", NAME] if run.name == "__main__.py" else [str(run.resolve())]  # python -m pixdial
     if config is not None:
         command += ["--config", str(config.resolve())]
     text = (files(NAME) / "data" / UNIT).read_text()
