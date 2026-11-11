@@ -208,7 +208,11 @@ def share(path: Path | None) -> str:
         for product, port in usbfs.products(slv3.VENDOR)
     ]
     panels = [f"- {found.id} at {found.where}: {firmware(found)}" for found in attached]
-    chips = [f"- {chip}: {', '.join(describe(k, r) for k, r in sensors.items())}" for chip, sensors in hwmon.chips()]
+    chips = [
+        f"- {chip}: {', '.join(describe(k, r) for k, r in sensors.items())}"
+        for chip, sensors in hwmon.chips()
+        if sensors  # a chip with no readings (asus beside asusec) says nothing
+    ]
     designs = plugins.available("designs", Design, DESIGNS)[0]
     misses = {name: [key for key in cls.reads if key not in given] for name, cls in designs.items()}
     text = "\n".join(
