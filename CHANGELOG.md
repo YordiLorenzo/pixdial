@@ -13,6 +13,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `doctor` prints the installed version and the command that upgrades it.
 - `devices` names the USB cable when it finds no panel, and points other Lian Li ids to lian-li-linux and Turing or TURZX ids to turing-smart-screen-python.
 - The default layout and rotation leave out designs whose readings no source gives (psu without a PSU source, gpu without NVIDIA); `doctor` lists them.
+- Plugin API: a design can declare `reads` and `needs`, and a source can say what it `gives()`.
 - `pixdial service install`, `remove` and `status`: the bundled user unit with ExecStart pointed at the running pixdial.
 - A config error (exit status 2) stops the service once instead of restarting it every 10 seconds.
 - Text draws without libraqm: font features go to Pillow only when it has raqm, and `doctor` says whether it has.
