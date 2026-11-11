@@ -20,8 +20,10 @@ the device. Designs contain no I/O; sources and devices handle it at either end.
 5. A changed frame goes to the device. An unchanged frame is resent after 30 seconds; switching designs blends
    over 0.4 seconds.
 
-Failed device opens are retried after 10 seconds. A source failure does not stop other sources; a render failure
-is reported for that panel. After resume, the runtime drops old readings, resets source handles and reopens devices.
+Failed device opens are retried after 10 seconds. A source failure does not stop other sources. A design that
+fails as it starts or while it draws, and a device error, are reported for that panel only: the other panels go on.
+A design that fails as it starts is skipped, and its panel keeps the design it shows. After resume, the runtime
+drops old readings, resets source handles and reopens devices.
 Normal shutdown calls each open device's `off()` and `close()`.
 
 ## SL V3 transport

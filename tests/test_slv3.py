@@ -7,6 +7,7 @@ import errno
 import io
 from pathlib import Path
 
+import numpy as np
 import pytest
 from cryptography.hazmat.decrepit.ciphers.algorithms import TripleDES
 from cryptography.hazmat.primitives.ciphers import Cipher, modes
@@ -75,6 +76,12 @@ def test_jpeg_fits_one_transfer_and_turns() -> None:
     assert len(data) <= slv3.PACKET - slv3.HEADER
     with Image.open(io.BytesIO(data)) as turned:
         assert turned.convert("L").getpixel((399, 399)) == pytest.approx(255, abs=60)  # top left went to bottom right
+
+
+def test_a_busy_picture_still_fits_one_frame() -> None:
+    noise = Image.fromarray(np.random.default_rng(0).integers(0, 256, (400, 400, 3), np.uint8))
+    data = slv3.jpeg(noise, 0)  # over 140 KB at quality 55 with full-resolution colour
+    assert len(data) <= slv3.PACKET - slv3.HEADER
 
 
 class Usb:

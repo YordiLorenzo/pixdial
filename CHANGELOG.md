@@ -5,6 +5,13 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A frame too big for one SL V3 transfer is sent with 4:2:0 colour, instead of stopping the runtime.
+- A device error other than `OSError` in `show()` is reported for that panel only; the other panels go on.
+- A plugin design that fails in `__init__` is skipped for that panel, instead of stopping the runtime.
+- A list value on a trail key (`cpu_load`, `psu_w`) leaves a gap in the trail, instead of stopping the runtime.
+
 ## [0.1.0] - 2026-11-06
 
 ### Added

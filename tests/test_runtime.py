@@ -11,9 +11,9 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from pixdial.designs import BUILTIN, THEMES, Eased, Still
+from pixdial.designs import BUILTIN, THEMES, Design, Eased, Still, Theme
 from pixdial.devices import Device
-from pixdial.readings import Reading
+from pixdial.readings import Reading, Value
 from pixdial.runtime import Catalog, Feed, Layout, Report, Runner, Sampler, Screen
 from pixdial.runtime.runner import FAST, SLOW
 from pixdial.sources import Source
@@ -34,8 +34,9 @@ class Clock:
 
 
 class Panel(Device):
-    def __init__(self, fails: int = 0) -> None:
+    def __init__(self, fails: int = 0, error: Exception | None = None) -> None:
         self.fails, self.opens, self.closes = fails, 0, 0
+        self.error = error  # what show() raises
         self.frames: list[tuple[float, Image.Image]] = []
         self.dark = False
         self.clock: Clock | None = None
@@ -49,6 +50,8 @@ class Panel(Device):
 
     def show(self, image: Image.Image) -> None:
         assert self.clock is not None
+        if self.error:
+            raise self.error
         self.frames.append((self.clock.now, image))
 
     def off(self) -> None:
@@ -68,22 +71,28 @@ class Fixed(Source):
 class Rig:
     """A runner with fake panels on a fake clock; the readings are set by hand."""
 
-    def __init__(self, tmp_path: Path, designs: tuple[str, ...], panels: list[Panel] | None = None) -> None:
+    def __init__(
+        self,
+        tmp_path: Path,
+        designs: tuple[str, ...],
+        panels: list[Panel] | None = None,
+        more: dict[str, type[Design]] | None = None,
+    ) -> None:
         self.clock = Clock()
         self.lines: list[str] = []
-        self.readings: dict[str, float] = {}
+        self.readings: dict[str, Value] = {}
         report = Report(self.lines.append)
         self.panels = panels or [Panel() for _ in designs]
         for panel in self.panels:
             panel.clock = self.clock
-        catalog = Catalog(BUILTIN, THEMES, "warm")
-        self.layout = Layout(catalog, len(self.panels), tmp_path / "layout", designs, list(BUILTIN), 60)
+        catalog = Catalog({**BUILTIN, **(more or {})}, THEMES, "warm")
+        self.layout = Layout(catalog, len(self.panels), tmp_path / "layout", designs, list(catalog.designs), 60)
         self.sampler = Sampler([("readings", Fixed())], report, self.clock.monotonic)
         screens = [Screen(str(i), p, report) for i, p in enumerate(self.panels)]
         feed = Feed({}, {spec for cls in BUILTIN.values() for spec in cls.trails})
         self.runner = Runner(screens, self.sampler, feed, catalog, self.layout, report, self.clock)  # type: ignore[arg-type]
 
-    def set(self, **values: float) -> None:
+    def set(self, **values: Value) -> None:
         """Readings the sources keep reporting."""
         self.readings = values
         self.sample()
@@ -240,6 +249,7 @@ def test_a_design_that_fails_halfway_is_drawn_afresh(tmp_path: Path, monkeypatch
     rig.set(cpu_c=40)
     rig.runner.screens[0].use("minimal", rig.runner.catalog.make)
     design = rig.runner.screens[0].design
+    assert design is not None
     fails = [1]
     moving = design.moving
 
@@ -252,3 +262,50 @@ def test_a_design_that_fails_halfway_is_drawn_afresh(tmp_path: Path, monkeypatch
     monkeypatch.setattr(design, "moving", flaky)
     rig.run_for(0.3)
     assert len(rig.panels[0].frames) == 1  # the second tick drew it whole and sent it
+
+
+class Broken(Design):
+    """A plugin design with a bug in its __init__."""
+
+    name, shows = "broken", "nothing"
+
+    def __init__(self, theme: Theme, scale: int = 1) -> None:
+        raise RuntimeError("a bug in a plugin")
+
+
+def test_a_design_that_fails_as_it_starts_stops_only_its_own_panel(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("broken", "minimal"), more={"broken": Broken})
+    rig.set(cpu_c=40)
+    rig.run_for(1)
+    assert rig.panels[1].frames and not rig.panels[0].frames
+    assert [line for line in rig.lines if "0 design" in line] == ["0 design broken: RuntimeError('a bug in a plugin')"]
+
+
+def test_rotation_passes_a_design_that_fails_as_it_starts(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("rotate",), [Panel()], more={"broken": Broken})
+    rig.layout.rotation = ["minimal", "broken", "crown"]
+    rig.clock.epoch -= rig.clock.wall() % 180 - 1  # a second past a minute that starts the rotation
+    rig.set(cpu_c=40)
+    rig.run_for(90)
+    assert rig.runner.screens[0].spec == "minimal"  # kept while the rotation is on the broken design
+    sent = len(rig.panels[0].frames)
+    rig.run_for(60)
+    assert rig.runner.screens[0].spec == "crown" and len(rig.panels[0].frames) > sent
+    assert sum("broken" in line for line in rig.lines) == 1
+
+
+def test_a_device_error_other_than_oserror_stops_only_its_own_panel(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("minimal", "crown"), [Panel(error=ValueError("frame too big")), Panel()])
+    rig.set(cpu_c=40)
+    rig.run_for(31)  # past a resend
+    assert len(rig.panels[1].frames) == 2
+    assert "0 panel: ValueError('frame too big')" in rig.lines
+
+
+def test_a_series_on_a_trail_key_leaves_a_gap(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("minimal", "crown"))
+    rig.set(cpu_c=40, cpu_load=np.array([10.0, 20.0]), psu_w=np.array([100.0, 200.0]))  # a command source's lists
+    rig.run_for(1)
+    assert rig.panels[0].frames  # crown can't draw a list as its load: it reports that for its own panel
+    assert all(np.isnan(trail.v).all() for trail in rig.runner.feed.trails.values())
+    assert any(line.startswith("1 design crown: ") for line in rig.lines)

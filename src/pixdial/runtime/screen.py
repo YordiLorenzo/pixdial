@@ -27,13 +27,14 @@ class Screen:
     """A design on a panel. The still part is drawn again only when its key changes; the moving part is painted over
     a copy of it at the design's own rate."""
 
-    design: Design  # set by use()
+    design: Design | None = None  # set by use() once a design starts
     frame: Image.Image  # the last frame sent, faded in; set by the first tick that sends
 
     def __init__(self, name: str, device: Device, report: Report) -> None:
         self.name, self.device, self.report = name, device, report
         self.open = False
-        self.spec: str | None = None
+        self.asked: str | None = None  # the design the layout asks for
+        self.spec: str | None = None  # the design shown
         self.still: Cached | None = None  # None: draw it on the next tick
         self.still_key: Hashable = None
         self.moving_key: Hashable = None
@@ -43,12 +44,21 @@ class Screen:
         self.still_at = self.sent_at = self.retry_at = -math.inf
 
     def use(self, spec: str, make: Callable[[str], Design]) -> None:
-        if spec != self.spec:
-            self.spec, self.design, self.still = spec, make(spec), None
-            self.fade_from, self.fade_start = self.shown, None  # fades from the last frame, starting with the next
+        if spec == self.asked:
+            return
+        self.asked = spec  # a design that fails as it starts is tried again when the layout or rotation comes back
+        try:
+            design = make(spec)
+        except Exception as error:  # a plugin design's bug: the panel keeps the design it shows
+            self.report(f"{self.name} design {spec}", repr(error))
+            return
+        self.spec, self.design, self.still = spec, design, None
+        self.fade_from, self.fade_start = self.shown, None  # fades from the last frame, starting with the next
 
     def tick(self, r: Snapshot, now: float, dt: float) -> bool:
         """Returns whether it animates, so the loop knows how soon to come back."""
+        if self.design is None:  # its first design failed as it started: nothing to show yet
+            return False
         try:
             still_key, moving_key = self.design.update(r, now, dt)
             if not self.open and not self.connect(now):
@@ -66,6 +76,7 @@ class Screen:
         """Whether there is a new frame: the still part drawn again if its key changed (and the rate allows), the
         moving part painted over it if either changed or a fade is under way."""
         design, still, redraw = self.design, self.still, False
+        assert design is not None  # tick() draws only with a design
         if still is None or (still_key != self.still_key and now - self.still_at >= 1 / STILL_FPS):
             still, redraw = draw(design), True
         if not (redraw or moving_key != self.moving_key or self.fade_from is not None):
@@ -82,8 +93,9 @@ class Screen:
         try:
             self.device.show(self.frame)
             self.sent_at = now
-        except OSError as error:  # unplugged, re-enumerated after a sleep, or another program took it
-            self.report(f"{self.name} panel", error)
+        except Exception as error:  # OSError: unplugged, re-enumerated after a sleep, or another program took it;
+            # anything else: a frame the driver can't take, or its bug. Opened again either way
+            self.report(f"{self.name} panel", error if isinstance(error, OSError) else repr(error))
             self.close()
 
     def connect(self, now: float) -> bool:

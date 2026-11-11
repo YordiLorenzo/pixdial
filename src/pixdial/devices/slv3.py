@@ -63,15 +63,16 @@ def brightness_level(percent: int) -> int:
 
 def jpeg(image: Image.Image, turn: int) -> bytes:
     """The picture turned for the panel's mount (clockwise), as a JPEG that fits in a frame after its header:
-    full-resolution colour keeps thin coloured lines sharp, and a busier picture steps the quality down."""
+    full-resolution colour keeps thin coloured lines sharp, and a busier picture steps the quality down, then halves
+    the colour resolution (4:2:0), which fits even pure noise."""
     transpose = TURNS[turn]
     turned = image.transpose(transpose) if transpose is not None else image
-    for quality in (90, 80, 70, 55):
+    for quality, subsampling in ((90, 0), (80, 0), (70, 0), (55, 0), (55, 2), (25, 2)):
         out = io.BytesIO()
-        turned.save(out, "JPEG", quality=quality, subsampling=0)
+        turned.save(out, "JPEG", quality=quality, subsampling=subsampling)
         if out.tell() <= PACKET - HEADER:
             return out.getvalue()
-    raise ValueError(f"frame still {out.tell()} bytes at JPEG quality {quality}")
+    raise ValueError(f"frame still {out.tell()} bytes at JPEG quality {quality} with 4:2:0 colour")
 
 
 class Stamps:
