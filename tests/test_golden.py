@@ -11,8 +11,11 @@ import numpy as np
 import pytest
 from PIL import Image, ImageFont
 
+from pixdial import demo
 from pixdial.designs import BUILTIN, THEMES, geometry
 from pixdial.gallery import Demo
+from pixdial.readings import Reading
+from pixdial.runtime import Feed
 
 GOLDEN = Path(__file__).parent / "golden"
 STATES = ("idle", "busy", "full", "missing")
@@ -48,3 +51,27 @@ def no_raqm(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 def test_draws_without_raqm(name: str, no_raqm: None) -> None:
     assert geometry.kit(1).font("Bold", 30).layout_engine == ImageFont.Layout.BASIC
     Demo(BUILTIN[name](THEMES["warm"]), "busy", {}).render()
+
+
+class Recorded(dict[str, Reading]):
+    """Readings that note each key a design looks up."""
+
+    def __init__(self, readings: dict[str, Reading], seen: set[str]) -> None:
+        super().__init__(readings)
+        self.seen = seen
+
+    def get(self, key: str, default: object = None) -> object:  # type: ignore[override]
+        self.seen.add(key)
+        return super().get(key, default)
+
+
+@pytest.mark.parametrize("name", BUILTIN)
+def test_a_design_lists_the_readings_it_reads(name: str) -> None:
+    cls, seen = BUILTIN[name], set[str]()
+    design, feed = cls(THEMES["warm"]), Feed({}, cls.trails)
+    for state in ("busy", "waiting"):
+        for t in (0.0, 0.5, 1.0):
+            design.update(feed.snapshot(Recorded(demo.readings(state, t), seen), t, demo.START + t), t, 0.5)
+            design.render(t)
+    assert seen == set(cls.reads)
+    assert set(cls.needs) <= set(cls.reads)

@@ -181,6 +181,9 @@ def catalog(config: Config) -> Catalog:
 
 def layout(config: Config, catalog: Catalog) -> Layout:
     names = list(catalog.designs)
+    if not (config.rotation and config.layout):
+        left_out = skipped(config, catalog)
+        names = [name for name in names if name not in left_out]
     rotation = config.rotation or tuple(names)
     for name in rotation:
         if name not in catalog.designs:
@@ -190,6 +193,18 @@ def layout(config: Config, catalog: Catalog) -> Layout:
         return Layout(catalog, len(config.panels), state_path(), default, rotation, config.rotate_every)
     except ValueError as error:
         raise ConfigError(f"layout: {error}") from None
+
+
+def skipped(config: Config, catalog: Catalog) -> dict[str, list[str]]:
+    """The designs the default rotation and layout leave out, each with what it needs that no source gives."""
+    given: set[str] = set()
+    for _, source in sources(config):
+        keys = source.gives()
+        if keys is None:  # it may give any reading
+            return {}
+        given |= keys
+    found = {name: [key for key in cls.needs if key not in given] for name, cls in catalog.designs.items()}
+    return {name: missing for name, missing in found.items() if missing}
 
 
 def devices(config: Config) -> list[tuple[str, Device]]:

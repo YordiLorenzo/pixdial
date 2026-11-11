@@ -30,7 +30,7 @@ def config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 def test_show_saves_a_layout_and_refuses_a_bad_one(config: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["--config", str(config), "show"]) == 0
-    assert capsys.readouterr().out == "crown gpu\n"
+    assert capsys.readouterr().out == "clock clock\n"  # with no sources, only the clock has what it shows
     assert main(["--config", str(config), "show", "orb", "clock:ice"]) == 0
     assert main(["--config", str(config), "show", "orb"]) == 2
     assert "1 designs for 2 panels; the panels keep orb clock:ice" in capsys.readouterr().err
@@ -58,6 +58,7 @@ def test_list_and_doctor(config: Path, capsys: pytest.CaptureFixture[str]) -> No
     assert main(["--config", str(config), "doctor"]) == 0
     out = capsys.readouterr().out
     assert "ok    panel top" in out and "FAIL" not in out
+    assert "the default rotation leaves out crown, gpu, psu," in out  # sources = []: only the clock is left
 
 
 def test_doctor_says_whether_pillow_has_raqm(

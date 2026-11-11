@@ -22,6 +22,11 @@ class Source(ABC):
     @abstractmethod
     def read(self) -> Mapping[str, Reading]: ...
 
+    def gives(self) -> frozenset[str] | None:
+        """The reading keys it can give on this machine, said without reading it (the default rotation leaves out
+        the designs no source gives what they need); None when it can't say, which leaves every design in."""
+        return None
+
     def reset(self) -> None:
         """After the machine resumed from sleep: drop handles that may not have survived it."""
 

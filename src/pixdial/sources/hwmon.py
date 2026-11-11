@@ -27,6 +27,10 @@ class Hwmon(Source):
                     raise ValueError(f"{key}: {name!r} is not chip/sensor")
         self.paths: dict[str, list[Path]] = {}  # key -> its sensors' input files, found once
 
+    def gives(self) -> frozenset[str]:
+        """Its keys, whether their sensors are there yet or not (a GPU's hwmon node can come after the service)."""
+        return frozenset(self.sensors)
+
     def read(self) -> dict[str, Reading]:
         """The readings it can read now; raises only when it can read none."""
         out, errors = {}, []

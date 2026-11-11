@@ -18,6 +18,8 @@ from .motion import Eased
 class Crown(Design):
     name = "crown"
     shows = "CPU: temperature, every thread's load, total load, package power"
+    reads = ("cpu_c", "cpu_load", "threads", "cpu_w")
+    needs = ("cpu_load",)
     about = (
         "The CPU's temperature inside a crown of radial bars, one per thread (the first at the top, clockwise), "
         "each as long as its thread is busy and in the colour of its load."
@@ -56,6 +58,8 @@ class Crown(Design):
 class Minimal(Design):
     name = "minimal"
     shows = "CPU temperature only"
+    reads = ("cpu_c",)
+    needs = ("cpu_c",)
     about = "One huge number in the colour of its heat against the CPU's limit, readable from across the room."
 
     r: Snapshot  # the last update()'s readings
@@ -82,6 +86,8 @@ class Minimal(Design):
 class Orb(Design):
     name = "orb"
     shows = "CPU load (colour and speed) and temperature"
+    reads = ("cpu_load", "cpu_c")
+    needs = ("cpu_load",)
     about = (
         "A slow plasma orb in the colour of the CPU's load: it stirs faster as the CPU works. Its temperature "
         "rests in the middle."
@@ -133,6 +139,8 @@ class Orb(Design):
 class Radar(Design):
     name = "radar"
     shows = "CPU load now and over the last sweep (12 s)"
+    reads = ("cpu_load",)
+    needs = ("cpu_load",)
     about = (
         "A radar sweep that leaves the CPU load behind it as glowing spokes, fading as the sweep moves on; the "
         "load in the middle."
@@ -191,6 +199,8 @@ class Radar(Design):
 class Grid(Design):
     name = "grid"
     shows = "CPU: every thread's load as a dot, temperature and total load"
+    reads = ("threads", "cpu_c", "cpu_load")
+    needs = ("threads",)
     about = (
         "The threads as a grid of dots that swell and change colour with their load, the CPU's temperature and "
         "load under them."

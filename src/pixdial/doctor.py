@@ -72,11 +72,17 @@ def panels(config: cfg.Config) -> Iterator[Check]:
 
 def layout(config: cfg.Config) -> Iterator[Check]:
     try:
-        specs = cfg.layout(config, cfg.catalog(config)).load()
+        catalog = cfg.catalog(config)
+        specs = cfg.layout(config, catalog).load()
+        left_out = {} if config.rotation and config.layout else cfg.skipped(config, catalog)
     except (cfg.ConfigError, ValueError) as error:
         yield Check("layout", False, str(error))
         return
     yield Check("layout", True, " ".join(specs))
+    if left_out:
+        keys = list(dict.fromkeys(key for missing in left_out.values() for key in missing))
+        unfed = f"{', '.join(keys[:-1])} or {keys[-1]}" if len(keys) > 1 else keys[0]
+        yield Check("designs", True, f"the default rotation leaves out {', '.join(left_out)}: no source gives {unfed}")
 
 
 def sources(config: cfg.Config, wait: Callable[[float], None]) -> Iterator[Check]:

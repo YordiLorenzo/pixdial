@@ -22,6 +22,9 @@ class Command(Source):
             raise ValueError("run: the program to run, as a list")
         self.run, self.key, self.period = list(run), key, period
 
+    def gives(self) -> frozenset[str] | None:
+        return None if self.key is None else frozenset({self.key})  # JSON may hold any key
+
     def read(self) -> dict[str, Reading]:
         try:
             done = subprocess.run(self.run, capture_output=True, text=True, timeout=self.period, check=True)
