@@ -17,10 +17,11 @@ the device. Designs contain no I/O; sources and devices handle it at either end.
 2. A design's `update()` returns keys for its still and moving parts.
 3. The screen redraws the still part only when its key changes, at most 10 times per second.
 4. Motion is drawn over a copy at the design's frame rate, up to the runtime's 30 frames per second.
-5. A changed frame goes to the device. An unchanged frame is resent after 30 seconds; switching designs blends
-   over 0.4 seconds.
+5. A changed frame goes to the panel's own thread, which sends the newest frame it has, so a slow or hung panel
+   holds up only itself. An unchanged frame is resent after 30 seconds; switching designs blends over 0.4 seconds.
 
-Failed device opens are retried after 10 seconds. A source failure does not stop other sources. A design that
+Failed device opens are retried after 10 seconds. After a failed send, the panel is closed and opened again after
+a wait that doubles from 0.2 to 10 seconds, and the error is logged once, not once per frame. A source failure does not stop other sources. A design that
 fails as it starts or while it draws, and a device error, are reported for that panel only: the other panels go on.
 A design that fails as it starts is skipped, and its panel keeps the design it shows. After resume, the runtime
 drops old readings, resets source handles and reopens devices.

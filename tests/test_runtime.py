@@ -1,10 +1,12 @@
 """The runtime's timing, on a fake clock: when frames go out, how often the still part is drawn, rotation, fades,
-retries, resume from sleep and layout changes."""
+retries, resume from sleep and layout changes. A few run the real loop and its threads on the real clock."""
 
 from __future__ import annotations
 
+import errno
 import itertools
 import threading
+import time
 from pathlib import Path
 
 import numpy as np
@@ -33,16 +35,32 @@ class Clock:
         return self.epoch + self.now
 
 
+class Live(Clock):
+    """The real clocks."""
+
+    def monotonic(self) -> float:
+        return time.monotonic()
+
+    def boottime(self) -> float:
+        return time.monotonic() + self.asleep
+
+    def wall(self) -> float:
+        return time.time()
+
+
 class Panel(Device):
     def __init__(self, fails: int = 0, error: Exception | None = None) -> None:
         self.fails, self.opens, self.closes = fails, 0, 0
         self.error = error  # what show() raises
+        self.opened: list[float] = []  # when each open() came
         self.frames: list[tuple[float, Image.Image]] = []
         self.dark = False
         self.clock: Clock | None = None
 
     def open(self) -> str:
+        assert self.clock is not None
         self.opens += 1
+        self.opened.append(self.clock.monotonic())
         if self.fails:
             self.fails -= 1
             raise OSError("busy")
@@ -52,7 +70,7 @@ class Panel(Device):
         assert self.clock is not None
         if self.error:
             raise self.error
-        self.frames.append((self.clock.now, image))
+        self.frames.append((self.clock.monotonic(), image))
 
     def off(self) -> None:
         self.dark = True
@@ -77,8 +95,9 @@ class Rig:
         designs: tuple[str, ...],
         panels: list[Panel] | None = None,
         more: dict[str, type[Design]] | None = None,
+        live: bool = False,
     ) -> None:
-        self.clock = Clock()
+        self.clock = Live() if live else Clock()
         self.lines: list[str] = []
         self.readings: dict[str, Value] = {}
         report = Report(self.lines.append)
@@ -88,7 +107,7 @@ class Rig:
         catalog = Catalog({**BUILTIN, **(more or {})}, THEMES, "warm")
         self.layout = Layout(catalog, len(self.panels), tmp_path / "layout", designs, list(catalog.designs), 60)
         self.sampler = Sampler([("readings", Fixed())], report, self.clock.monotonic)
-        screens = [Screen(str(i), p, report) for i, p in enumerate(self.panels)]
+        screens = [Screen(str(i), p, report, self.clock.monotonic) for i, p in enumerate(self.panels)]
         feed = Feed({}, {spec for cls in BUILTIN.values() for spec in cls.trails})
         self.runner = Runner(screens, self.sampler, feed, catalog, self.layout, report, self.clock)  # type: ignore[arg-type]
 
@@ -98,17 +117,37 @@ class Rig:
         self.sample()
 
     def sample(self) -> None:
-        self.sampler.values = [{k: (Reading(v), self.clock.now) for k, v in self.readings.items()}]
+        self.sampler.values = [{k: (Reading(v), self.clock.monotonic()) for k, v in self.readings.items()}]
+
+    def tick(self) -> float:
+        """One tick, with what each panel's thread would do before and after it."""
+        self.pump()
+        delay = self.runner.tick()
+        self.pump()
+        return delay
+
+    def pump(self) -> None:
+        for screen in self.runner.screens:
+            screen.sender.step()
 
     def run_for(self, seconds: float) -> list[float]:
         """Ticks for that long, as the loop would; returns the delays."""
         delays, end = [], self.clock.now + seconds
         while self.clock.now < end - 1e-9:
             self.sample()
-            delay = self.runner.tick()
+            delay = self.tick()
             delays.append(delay)
             self.clock.now += delay
         return delays
+
+    def run_live(self, seconds: float) -> None:
+        """The runner's own loop and threads on the real clock, for that long."""
+        stop = threading.Event()
+        loop = threading.Thread(target=self.runner.run, args=(stop,))
+        loop.start()
+        time.sleep(seconds)
+        stop.set()
+        loop.join(10)
 
 
 def test_a_still_screen_sends_once_then_every_30_s(tmp_path: Path) -> None:
@@ -131,7 +170,7 @@ def test_an_animation_runs_at_30_frames_a_second(tmp_path: Path) -> None:
 def test_the_still_part_is_drawn_at_most_10_times_a_second(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     rig = Rig(tmp_path, ("psu",))
     rig.set(psu_w=100, working=1)
-    rig.runner.tick()
+    rig.tick()
     design = rig.runner.screens[0].design
     assert design is not None
     draws: list[float] = []
@@ -145,7 +184,7 @@ def test_the_still_part_is_drawn_at_most_10_times_a_second(tmp_path: Path, monke
     for i in range(60):  # 2 s at 30 frames a second, the watts changing every frame
         rig.clock.now += FAST
         rig.set(psu_w=100 + 20 * i, working=1)
-        rig.runner.tick()
+        rig.tick()
     gaps = [b - a for a, b in itertools.pairwise(draws)]
     assert len(draws) >= 10 and min(gaps) >= 0.1 - 1e-9
 
@@ -154,7 +193,7 @@ def test_rotation_steps_every_panel_each_minute_without_repeats(tmp_path: Path) 
     rig = Rig(tmp_path, ("crown", "gpu", "psu"))
     rig.layout.save(["rotate"])
     rig.clock.epoch -= rig.clock.wall() % 60 - 1  # a second past the minute
-    rig.runner.tick()
+    rig.tick()
     first = [s.spec for s in rig.runner.screens]
     assert len(set(first)) == 3
     rig.run_for(58.5)
@@ -192,7 +231,7 @@ def test_a_resume_reopens_the_panels_and_resets_the_sources(tmp_path: Path) -> N
     rig.set(cpu_c=40)
     rig.run_for(1)
     rig.clock.asleep += 3600
-    rig.runner.tick()
+    rig.tick()
     assert rig.panels[0].closes == 1 and rig.panels[0].opens == 2
     assert rig.sampler.resets == [True]
 
@@ -216,7 +255,7 @@ def test_stale_readings_go_missing(tmp_path: Path) -> None:
 def test_the_panels_go_dark_when_it_stops(tmp_path: Path) -> None:
     rig = Rig(tmp_path, ("minimal",))
     stop = threading.Event()
-    rig.runner.tick()
+    rig.tick()
     stop.set()
     rig.runner.run(stop)
     assert rig.panels[0].dark
@@ -231,7 +270,7 @@ def test_a_series_that_changes_length_starts_over() -> None:
 def test_a_failing_design_stops_only_its_own_panel(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     rig = Rig(tmp_path, ("minimal", "crown"))
     rig.set(cpu_c=40)
-    rig.runner.tick()
+    rig.tick()
     broken = rig.runner.screens[0].design
 
     def update(r: object, now: float, dt: float) -> tuple[object, object]:
@@ -309,3 +348,58 @@ def test_a_series_on_a_trail_key_leaves_a_gap(tmp_path: Path) -> None:
     assert rig.panels[0].frames  # crown can't draw a list as its load: it reports that for its own panel
     assert all(np.isnan(trail.v).all() for trail in rig.runner.feed.trails.values())
     assert any(line.startswith("1 design crown: ") for line in rig.lines)
+
+
+class Cheap(Design):
+    """A new frame every tick that costs next to nothing to draw, so a test measures the runtime, not the drawing."""
+
+    name, shows = "cheap", "a counter"
+
+    def __init__(self, theme: Theme, scale: int = 1) -> None:
+        super().__init__(theme, scale)
+        self.count = 0
+
+    def update(self, r: object, now: float, dt: float) -> tuple[int, int]:
+        self.count += 1
+        return 0, self.count
+
+    def still(self) -> Still:
+        return np.zeros((400, 400, 3), np.float32), []
+
+
+class Hung(Panel):
+    """A panel that stopped answering: every frame's write times out after usbfs's 1 s."""
+
+    def show(self, image: Image.Image) -> None:
+        time.sleep(1)
+        raise TimeoutError(errno.ETIMEDOUT, "Connection timed out")
+
+
+def test_a_hung_panel_holds_up_no_other(tmp_path: Path) -> None:
+    hung = Hung()
+    rig = Rig(tmp_path, ("cheap", "cheap"), [hung, Panel()], more={"cheap": Cheap}, live=True)
+    rig.run_live(3)
+    healthy = [t for t, _ in rig.panels[1].frames]
+    assert len(healthy) / (healthy[-1] - healthy[0]) >= 25  # frames a second; 1 when the hung panel held it up
+    assert len([line for line in rig.lines if line.startswith("0 panel")]) <= hung.opens  # one per retry at most
+
+
+def test_a_panel_that_fails_every_frame_waits_longer_each_time_and_says_so_once(tmp_path: Path) -> None:
+    panel = Panel(error=OSError(errno.EIO, "Input/output error"))
+    rig = Rig(tmp_path, ("psu",), [panel])
+    rig.set(psu_w=300, working=2)
+    rig.run_for(60)
+    waits = [b - a for a, b in itertools.pairwise(panel.opened)]
+    assert waits == pytest.approx([0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 10, 10, 10, 10], abs=0.04)  # a tick's lag at most
+    assert [line for line in rig.lines if "panel" in line] == ["0 panel: [Errno 5] Input/output error"]
+
+
+def test_a_panel_gets_the_newest_frame_and_no_older_one(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("minimal",))
+    rig.run_for(0.1)
+    sent, frames = len(rig.panels[0].frames), [Image.new("RGB", (400, 400), (i, 0, 0)) for i in range(3)]
+    for frame in frames:  # while the panel is busy with a frame before them
+        rig.runner.screens[0].sender.post(frame)
+    rig.pump()
+    rig.pump()
+    assert [image for _, image in rig.panels[0].frames[sent:]] == [frames[2]]
