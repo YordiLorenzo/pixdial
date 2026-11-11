@@ -72,6 +72,7 @@ Start with the runnable design in the [README](../README.md#build-a-design) or t
 | `still()` | Return the drawing from `Frame.finish()`. Called when the still key changes, at most 10 times a second in the runtime. |
 | `moving(pixels, now)` | Optional: paint into a copy of the still picture. Set `fps` and return `self.animating(now)` as the moving key while active, otherwise `None`. |
 | `trails` | A tuple of `TrailSpec` requests, available from `snapshot.trail(spec)` even after another design has been on screen. |
+| `reads`, `needs` | The reading keys it shows, and those it is mostly dashes without. While no source gives one of `needs`, the default layout and rotation leave it out. `doctor --share` lists the `reads` no source gives. |
 
 Coordinates use the panel's 400 × 400 grid; the drawing kit applies the requested render scale.
 Designs should only render from snapshots, with no I/O. Use `Eased` for numbers that glide to their next value;
@@ -114,7 +115,9 @@ The runtime retries on the next period and keeps the other sources running. Old 
 `max(5, 3 * period)` seconds. When two sources report the same key, the later source in the config wins while fresh.
 
 A reading has `value`, `unit`, `max`, `warn` and `label`. Config metadata overrides the last three.
-Optional `reset()` drops handles after resume; `close()` releases resources at shutdown.
+Optional `reset()` drops handles after resume; `close()` releases resources at shutdown. Optional `gives()`
+returns the reading keys the source can give on this machine, without reading it; the default `None` means any key,
+which keeps every design in the default rotation.
 See [Configuration](config.md#readings-and-ranges) for keys used by built-in designs and
 [the command source](config.md#a-command-source) for a JSON alternative.
 

@@ -21,6 +21,9 @@ class Cpu(Source):
         self.stat = Path(stat)
         self.last: tuple[NDArray[np.float64], NDArray[np.float64]] | None = None
 
+    def gives(self) -> frozenset[str]:
+        return frozenset({"cpu_load", "threads"})
+
     def read(self) -> dict[str, Reading]:
         rows = [line.split() for line in self.stat.read_text().splitlines() if line.startswith("cpu")]
         times = np.array([[int(x) for x in row[1:9]] for row in rows], dtype=np.float64)
@@ -38,6 +41,9 @@ class Rapl(Source):
     def __init__(self, path: str = "/sys/class/powercap/intel-rapl:0/energy_uj") -> None:
         self.path = Path(path)
         self.last: tuple[int, float] | None = None
+
+    def gives(self) -> frozenset[str]:
+        return frozenset({"cpu_w"})
 
     def read(self) -> dict[str, Reading]:
         energy, now = int(self.path.read_text()), time.monotonic()

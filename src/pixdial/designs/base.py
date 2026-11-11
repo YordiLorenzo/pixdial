@@ -34,6 +34,9 @@ class Design:
     fps: ClassVar[int] = 0
     under_text: ClassVar[bool] = False  # whether moving() paints where the text is (then text goes over every frame)
     trails: ClassVar[tuple[TrailSpec, ...]] = ()  # readings whose past it draws
+    reads: ClassVar[tuple[str, ...]] = ()  # the readings it shows (`doctor --share` lists those no source gives)
+    needs: ClassVar[tuple[str, ...]] = ()  # those it is mostly dashes without: while no source gives one of them,
+    # the default rotation and layout leave it out
     previews: ClassVar[tuple[str, ...]] = ("busy", "idle")  # the demo states the gallery shows it in
     LABEL_Y, LINE_Y, FOOT_Y = 104, 292, 352  # the label over a ring design's number, the line under it, the foot
 

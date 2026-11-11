@@ -31,6 +31,8 @@ def sessions(n: int) -> str:
 class Quota(Design):
     name = "quota"
     shows = "An agent pool's quota left, agent sessions working, a wait for you"
+    reads = ("quota", "working", "waiting")
+    needs = ("quota",)
     about = (
         "The agents' quota as a big coral fuel gauge, one dot per working session circling inside it, and the "
         "whole screen pulsing magenta while a session waits for you."

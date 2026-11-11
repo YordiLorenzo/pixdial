@@ -17,6 +17,8 @@ from .motion import Eased
 class Gpu(Design):
     name = "gpu"
     shows = "GPU: board power of its power limit, temperature, use, the power connector's pins"
+    reads = ("gpu_w", "pins", "gpu_c", "gpu_use")
+    needs = ("gpu_w",)
     about = (
         "The GPU's power on a 270° gauge of its power limit, temperature and use under it, and the power "
         "connector's pins (where a sensor reports them) as bars in the gauge's opening: equal bars are a healthy "
@@ -65,6 +67,8 @@ class Gpu(Design):
 class Twin(Design):
     name = "twin"
     shows = "GPU temperature (outer ring, against its slowdown point) and power (inner, of its limit)"
+    reads = ("gpu_c", "gpu_w")
+    needs = ("gpu_c", "gpu_w")
     about = (
         "Two rings for the GPU: temperature outside, power inside, the watts big and the temperature in its own "
         "colour under them."
@@ -102,6 +106,8 @@ class Twin(Design):
 class Pins(Design):
     name = "pins"
     shows = "GPU power connector: each pin's current, the total current and power, balance"
+    reads = ("pins", "gpu_w", "pin_total", "pin_balance")
+    needs = ("pins",)
     about = (
         "The GPU's power connector pin by pin, where a sensor reports them: a tall bar per pin with its amps, a "
         "line at the warning, and the connector's total and balance (smallest over largest) under them."

@@ -9,6 +9,7 @@ from ..readings import Reading
 from .base import Source
 
 DRM = Path("/sys/class/drm")
+PCI = Path("/sys/bus/pci/devices")  # listed at boot, before amdgpu binds the card
 GIB = 2**30
 
 
@@ -25,6 +26,17 @@ class Amdgpu(Source):
 
     def __init__(self, root: str = str(DRM)) -> None:
         self.root = Path(root)
+
+    def gives(self) -> frozenset[str]:
+        """Its readings where an AMD display device is on the PCI bus (vendor 0x1002, class 0x03), none elsewhere."""
+        for device in PCI.glob("*"):
+            try:
+                amd = (device / "vendor").read_text().strip() == "0x1002"
+                if amd and (device / "class").read_text().startswith("0x03"):
+                    return frozenset(READINGS)
+            except OSError:
+                continue
+        return frozenset()
 
     def read(self) -> dict[str, Reading]:
         """The readings it can read now; raises only when its GPU gives none."""

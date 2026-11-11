@@ -9,6 +9,7 @@ from ..readings import Reading
 from .base import Source
 
 SLOWDOWN = 1  # NVML_TEMPERATURE_THRESHOLD_SLOWDOWN
+LIBRARY = "libnvidia-ml.so.1"  # the NVIDIA driver's
 
 
 class Nvml(Source):
@@ -42,6 +43,14 @@ class Nvml(Source):
             self.close()  # start over next time
             raise
 
+    def gives(self) -> frozenset[str]:
+        """Its readings where the NVIDIA driver's library loads, none elsewhere."""
+        try:
+            ctypes.CDLL(LIBRARY)
+        except OSError:
+            return frozenset()
+        return frozenset({"gpu_c", "gpu_w", "gpu_use"})
+
     def reset(self) -> None:
         self.close()  # the handle may not survive the GPU's suspend
 
@@ -51,7 +60,7 @@ class Nvml(Source):
         self.lib = None
 
     def connect(self) -> None:
-        lib = ctypes.CDLL("libnvidia-ml.so.1")
+        lib = ctypes.CDLL(LIBRARY)
         self.check(lib.nvmlInit_v2())
         self.lib = lib
         self.check(lib.nvmlDeviceGetHandleByIndex_v2(self.index, ctypes.byref(self.dev)))

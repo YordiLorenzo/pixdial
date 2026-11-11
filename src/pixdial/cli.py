@@ -4,17 +4,18 @@ from __future__ import annotations
 
 import argparse
 import signal
+import subprocess
 import sys
 import threading
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
-from . import NAME, __version__, demo, doctor, plugins
+from . import NAME, __version__, demo, doctor, plugins, service, setup
 from . import config as cfg
 from .designs import BUILTIN as DESIGNS
 from .designs import THEMES, Design
 from .devices import BUILTIN as DEVICES
-from .devices import Device
+from .devices import Device, slv3
 from .gallery import Demo, gallery
 from .runtime import ROTATE, Report
 from .sources import BUILTIN as SOURCES
@@ -60,7 +61,10 @@ def parser() -> argparse.ArgumentParser:
     render_.set_defaults(command=render)
 
     doctor_ = sub.add_parser("doctor", help="check the config, panels, permissions and sources")
+    doctor_.add_argument("--share", action="store_true", help="the same as Markdown for an issue, without serials")
     doctor_.set_defaults(command=check)
+    service_parser(sub)
+    setup_parser(sub)
     return p
 
 
@@ -112,11 +116,14 @@ def devices(args: argparse.Namespace) -> int:
     for kind, cls in plugins.available("devices", Device, DEVICES)[0].items():
         for panel in cls.discover():
             found += 1
-            access = "ok" if panel.access else "no access (`doctor` says how to fix it)"
+            access = f"in use by {panel.held}" if panel.held else "ok"
+            access = access if panel.access else f"no access (`{NAME} setup` gives it)"
             where = f"panel {panels[panel.id]!r}" if panel.id in panels else "not in the config"
             print(f"{kind}  {panel.id}  {panel.where}  {access}  {where}" + (f"  ({panel.note})" if panel.note else ""))
+    for product, port in doctor.others():
+        print(f"{slv3.VENDOR:04x}:{product:04x}  usb {port}  {doctor.pointer(product)}")
     if not found:
-        print("no panels attached", file=sys.stderr)
+        print(f"no panels attached. {slv3.CABLE}", file=sys.stderr)
     return OK if found else SHORT
 
 
@@ -143,8 +150,68 @@ def render(args: argparse.Namespace) -> int:
 
 
 def check(args: argparse.Namespace) -> int:
-    problems = 0
+    if args.share:
+        print(doctor.share(args.config))
+        return OK
+    failed = 0
     for c in doctor.checks(args.config):
-        problems += not c.ok
-        print(f"{'ok' if c.ok else 'FAIL':4}  {c.what:16} {c.detail}", flush=True)
-    return OK if not problems else SHORT
+        failed += c.status == doctor.FAIL
+        print(doctor.line(c), flush=True)
+    return OK if not failed else SHORT
+
+
+def service_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    service_ = sub.add_parser("service", help="run `run` at every login, as a systemd user service")
+    actions = service_.add_subparsers(required=True, metavar="ACTION")
+    for name, command, about in (
+        ("install", service_install, "install the unit for this pixdial, enable it and start it"),
+        ("remove", service_remove, "stop it, disable it and delete the unit"),
+        ("status", service_status, "systemctl's status of it, with its last log lines"),
+    ):
+        actions.add_parser(name, help=about).set_defaults(command=systemctl_errors(command))
+
+
+def systemctl_errors(command: Callable[[argparse.Namespace], int]) -> Callable[[argparse.Namespace], int]:
+    """The command, with a failed or missing systemctl as one line and exit status 1."""
+
+    def checked(args: argparse.Namespace) -> int:
+        try:
+            return command(args)
+        except (OSError, subprocess.CalledProcessError) as error:
+            print(f"{NAME}: {error}", file=sys.stderr)
+            return SHORT
+
+    return checked
+
+
+def service_install(args: argparse.Namespace) -> int:
+    path = service.install(args.config)
+    print(f"wrote {path}, enabled and started it: `run` now starts at every login")
+    if setup.needs_group_rule():
+        print(f"With nobody at the machine after a reboot, it can't open the panels: `{NAME} setup` gives them a")
+        print("rule that works then")
+    elif not service.lingers():
+        print(f"To start it at boot, before you log in: loginctl enable-linger, then `{NAME} setup` again")
+    return OK
+
+
+def service_remove(args: argparse.Namespace) -> int:
+    if not service.remove():
+        print(f"{NAME}: no unit at {service.path()}", file=sys.stderr)
+        return SHORT
+    print(f"stopped and disabled {service.UNIT}, and deleted {service.path()}")
+    return OK
+
+
+def service_status(args: argparse.Namespace) -> int:
+    return OK if service.status() == 0 else SHORT
+
+
+def setup_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    setup_ = sub.add_parser("setup", help="find the panels, give this user access, write the config and check it")
+    setup_.add_argument("--dry-run", action="store_true", help="print what it would do; write and run nothing")
+    setup_.set_defaults(command=set_up)
+
+
+def set_up(args: argparse.Namespace) -> int:
+    return OK if setup.setup(args.config, args.dry_run) else SHORT

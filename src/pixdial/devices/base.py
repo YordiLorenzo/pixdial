@@ -11,13 +11,14 @@ from PIL import Image
 
 @dataclass(frozen=True)
 class Found:
-    """A panel attached now: its id (what a config names it by), where it is, whether this user may open it, and what
-    `devices` notes beside it (a model that is only experimental)."""
+    """A panel attached now: its id (what a config names it by), where it is, whether this user may open it, what
+    `devices` notes beside it (a model that is only experimental), and what has it open now ("" while nothing has)."""
 
     id: str
     where: str
     access: bool
     note: str = ""
+    held: str = ""
 
 
 class Device(ABC):

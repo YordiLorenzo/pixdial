@@ -8,9 +8,9 @@ import pytest
 
 from pixdial import config as cfg
 from pixdial.devices import Png, Slv3
-from pixdial.readings import Meta
+from pixdial.readings import Meta, Reading
 from pixdial.runtime import Report
-from pixdial.sources import Cpu, Hwmon
+from pixdial.sources import Cpu, Hwmon, Nvml, Source
 
 GOOD = """
 theme = "ember"
@@ -77,10 +77,62 @@ def test_a_full_config(tmp_path: Path) -> None:
     assert cfg.layout(config, cfg.catalog(config)).default == ("crown", "gpu:ice")
 
 
-def test_defaults(tmp_path: Path) -> None:
+@pytest.fixture
+def nvidia(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A machine with the NVIDIA driver's library."""
+    monkeypatch.setattr(Nvml, "gives", lambda self: frozenset({"gpu_c", "gpu_w", "gpu_use"}))
+
+
+def test_defaults(tmp_path: Path, nvidia: None) -> None:
     config = load(tmp_path, '[[panels]]\nserial = "a"\n[[panels]]\nserial = "b"\n')
     assert config.sources == cfg.DEFAULT_SOURCES
     assert cfg.layout(config, cfg.catalog(config)).default == ("crown", "gpu")
+
+
+THREE = '[[panels]]\nserial = "a"\n[[panels]]\nserial = "b"\n[[panels]]\nserial = "c"\n'
+NEED_A_PSU_OR_AGENTS = ["psu", "pins", "flow", "quota", "history"]
+
+
+def test_the_default_layout_and_rotation_skip_designs_no_source_feeds(tmp_path: Path, nvidia: None) -> None:
+    config = load(tmp_path, THREE)
+    plan = cfg.layout(config, cfg.catalog(config))
+    assert plan.default == ("crown", "gpu", "twin")
+    assert not set(NEED_A_PSU_OR_AGENTS) & set(plan.rotation)
+    assert cfg.skipped(cfg.catalog(config), cfg.sources(config)) == {
+        "psu": ["psu_w"],
+        "pins": ["pins"],
+        "flow": ["psu_w"],
+        "quota": ["quota"],
+        "history": ["psu_w"],
+    }
+
+
+def test_without_the_nvidia_library_the_gpu_designs_are_skipped_too(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("pixdial.sources.nvml.LIBRARY", "libnvidia-ml-not-here.so.1")
+    config = load(tmp_path, THREE)
+    plan = cfg.layout(config, cfg.catalog(config))
+    assert plan.default == ("crown", "clock", "minimal")
+    assert "gpu" not in plan.rotation and "twin" not in plan.rotation
+
+
+def test_a_source_that_says_what_it_gives_feeds_its_designs(tmp_path: Path) -> None:
+    psu = '[[sources]]\ntype = "hwmon"\nreadings = { psu_w = "corsairpsu/power1" }\n'
+    config = load(tmp_path, THREE + psu)
+    assert cfg.layout(config, cfg.catalog(config)).default == ("psu", "flow", "history")
+
+
+def test_a_json_command_may_give_anything_so_nothing_is_skipped(tmp_path: Path) -> None:
+    config = load(tmp_path, THREE + '[[sources]]\ntype = "command"\nrun = ["agents", "--json"]\n')
+    assert cfg.skipped(cfg.catalog(config), cfg.sources(config)) == {}
+    assert cfg.layout(config, cfg.catalog(config)).default == ("crown", "gpu", "psu")
+
+
+def test_a_rotation_or_layout_the_config_names_is_kept(tmp_path: Path) -> None:
+    config = load(tmp_path, 'layout = ["psu"]\nrotation = ["psu", "pins"]\nsources = []\n[[panels]]\nserial = "a"\n')
+    plan = cfg.layout(config, cfg.catalog(config))
+    assert plan.default == ("psu",) and plan.rotation == ["psu", "pins"]
 
 
 def test_no_file_at_the_default_place_means_the_defaults(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -116,6 +168,24 @@ def test_no_file_at_the_default_place_means_the_defaults(tmp_path: Path, monkeyp
 )
 def test_errors_say_where(tmp_path: Path, text: str, message: str) -> None:
     assert message in error(tmp_path, text)
+
+
+class Counted(Source):
+    """A plugin source that may hold a device from the moment it is made."""
+
+    made = 0
+
+    def __init__(self) -> None:
+        Counted.made += 1
+
+    def read(self) -> dict[str, Reading]:
+        return {}
+
+
+def test_run_makes_each_source_once(tmp_path: Path) -> None:
+    config = load(tmp_path, f'{THREE}[[sources]]\ntype = "{__name__}:Counted"\n')
+    cfg.runner(config, Report())
+    assert Counted.made == 1
 
 
 def test_run_needs_panels(tmp_path: Path) -> None:

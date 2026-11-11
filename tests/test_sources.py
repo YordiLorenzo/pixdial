@@ -12,7 +12,7 @@ import pytest
 
 from pixdial.readings import Reading
 from pixdial.runtime import Report, Sampler
-from pixdial.sources import Amdgpu, Command, Cpu, Hwmon, Rapl, Source
+from pixdial.sources import Amdgpu, Command, Cpu, Hwmon, Nvml, Rapl, Source
 from pixdial.sources.amdgpu import GIB
 
 
@@ -109,6 +109,19 @@ def test_command_reads_json_or_one_number() -> None:
             Command([sys.executable, "-c", f"print({bad!r})"]).read()
     with pytest.raises(OSError):
         Command([sys.executable, "-c", "raise SystemExit(1)"]).read()
+
+
+def test_sources_say_what_they_give_without_reading(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    assert Cpu().gives() == {"cpu_load", "threads"}
+    assert Rapl().gives() == {"cpu_w"}
+    assert Hwmon({"cpu_c": "k10temp/Tctl", "psu_w": "corsairpsu/power1"}, root=str(tmp_path)).gives() == {
+        "cpu_c",
+        "psu_w",
+    }
+    assert Command(["x"], key="pump").gives() == frozenset({"pump"})
+    assert Command(["x"]).gives() is None  # JSON: any key
+    monkeypatch.setattr("pixdial.sources.nvml.LIBRARY", "libnvidia-ml-not-here.so.1")
+    assert Nvml().gives() == frozenset()
 
 
 class Flaky(Source):

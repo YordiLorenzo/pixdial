@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 SYSFS = Path("/sys/bus/usb/devices")
+PROC = Path("/proc")
 USBDEVFS_BULK = 0xC0185502
 USBDEVFS_CLAIMINTERFACE = 0x8004550F
 PIECE = 16_384  # bytes per bulk write: the pieces usbfs itself cuts the daemon's (libusb's) transfers into, USB_SG_SIZE
@@ -40,6 +41,34 @@ def attached(vendor: int, product: int, sysfs: Path = SYSFS) -> list[UsbDevice]:
         except (OSError, ValueError):  # an interface directory, or a device without a serial
             continue
     return found
+
+
+def products(vendor: int, sysfs: Path = SYSFS) -> list[tuple[int, str]]:
+    """The product id and sysfs name of every attached device from this vendor."""
+    found = []
+    for d in sorted(sysfs.glob("*")):
+        try:
+            if int(read(d / "idVendor"), 16) == vendor:
+                found.append((int(read(d / "idProduct"), 16), d.name))
+        except (OSError, ValueError):  # an interface directory
+            continue
+    return found
+
+
+def holder(device: UsbDevice, sysfs: Path = SYSFS, proc: Path = PROC) -> str:
+    """What has claimed the device's interface 0, which a program must claim to talk to it (usbfs is then the
+    interface's driver): "" while nothing has; the program of this user with the device open ("pixdial (pid 42)");
+    else "a program of another user", whose open files this user can't see."""
+    driver = sysfs / f"{device.port}:1.0" / "driver"  # configuration 1, interface 0
+    if not driver.is_symlink() or driver.readlink().name != "usbfs":
+        return ""
+    for d in sorted(proc.glob("[0-9]*")):
+        try:
+            if any(str(fd.readlink()) == device.node for fd in (d / "fd").iterdir()):
+                return f"{read(d / 'comm')} (pid {d.name})"
+        except OSError:  # another user's, or gone
+            continue
+    return "a program of another user"
 
 
 def read(path: Path) -> str:

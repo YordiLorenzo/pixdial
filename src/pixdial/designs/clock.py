@@ -16,6 +16,7 @@ from .motion import Eased
 class Clock(Design):
     name = "clock"
     shows = "The time and date, the system load (the higher of CPU and GPU), a seconds comet"
+    reads = ("cpu_load", "gpu_w")
     about = (
         "A calm clock: hours and minutes, the date, a thin ring in the load colour and a comet that runs the "
         "seconds round."

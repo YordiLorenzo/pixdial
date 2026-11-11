@@ -244,7 +244,7 @@ def test_real_panels(request: pytest.FixtureRequest, capsys: pytest.CaptureFixtu
     if not found:
         pytest.fail("no SL V3 or TL panel attached")
     if denied := [f.where for f in found if not f.access]:
-        pytest.fail(f"no read and write access to {', '.join(denied)} ({slv3.UDEV_RULE} gives it)")
+        pytest.fail(f"no read and write access to {', '.join(denied)} : `pixdial setup` gives it")
     if held := holders({d.node for d, _ in slv3.panels()}):
         pytest.fail(f"another program has a panel open: {'; '.join(held)}. Stop it first ({STOP_PIXDIAL})")
     panels = [slv3.Slv3(f.id) for f in found]

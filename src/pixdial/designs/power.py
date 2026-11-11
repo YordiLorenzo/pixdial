@@ -19,6 +19,8 @@ from .motion import Eased
 class Psu(Design):
     name = "psu"
     shows = "PSU DC output of its rating, PSU temperature and fan, an agent pool's quota and sessions"
+    reads = ("psu_w", "quota", "working", "waiting", "psu_c", "psu_fan")
+    needs = ("psu_w",)
     about = (
         "The PSU's output on a gauge of its rating, and the agents as an inner ring: their quota in coral, a "
         "rainbow comet while they work, magenta pulses while one waits for you."
@@ -103,6 +105,8 @@ def hues(angles: F32) -> F32:
 class Flow(Design):
     name = "flow"
     shows = "PSU output split into CPU package, GPU board and the rest (board, RAM, drives, fans)"
+    reads = ("psu_w", "cpu_w", "gpu_w")
+    needs = ("psu_w",)
     about = (
         "Where the watts go: a ring split by the CPU's and the GPU's own power figures, the rest of the PSU's "
         "output after them, with the total in the middle."
@@ -145,6 +149,8 @@ class Flow(Design):
 class History(Design):
     name = "history"
     shows = "PSU DC output now and over the last two minutes, on the PSU's rating"
+    reads = ("psu_w",)
+    needs = ("psu_w",)
     about = (
         "The PSU's output as a big number over a filled graph of the last two minutes on a fixed scale (zero to "
         "the PSU's rating, lines at a third and two thirds), in the load colours: a long job reads as a shape."

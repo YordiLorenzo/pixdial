@@ -189,22 +189,14 @@ def test_a_tl_lcd_is_found_as_experimental_and_driven_like_an_sl_v3(
 
     monkeypatch.setattr(slv3, "Bulk", bulk)
     panel = slv3.Slv3("TLSERIAL")
-    assert panel.problem() == f"no read and write access to usb 1-3 (/dev/bus/usb/001/005) ({slv3.UDEV_RULE} gives it)"
+    assert panel.problem() == "no read and write access to usb 1-3 (/dev/bus/usb/001/005): `pixdial setup` gives it"
     assert panel.open() == "firmware slv3_2024091003_01"
     panel.show(Image.new("RGB", (400, 400)))
     assert opened == [("/dev/bus/usb/001/005", slv3.EP_OUT, slv3.EP_IN)]
     assert fake.commands() == [slv3.REVISION, slv3.FRAME_RATE, slv3.VERSION, slv3.BRIGHTNESS, slv3.FRAME]
-    assert slv3.Slv3("AIOSERIAL").problem() == "no SL V3 or TL LCD with serial AIOSERIAL attached"
+    assert slv3.Slv3("AIOSERIAL").problem() == f"no SL V3 or TL LCD with serial AIOSERIAL attached. {slv3.CABLE}"
     with pytest.raises(FileNotFoundError, match="AIOSERIAL"):
         slv3.Slv3("AIOSERIAL").open()
-
-
-def test_the_udev_rule_covers_every_product_the_driver_opens() -> None:
-    rules = [line for line in slv3.UDEV_RULE.read_text().splitlines() if line and not line.startswith("#")]
-    assert rules == [
-        f'SUBSYSTEM=="usb", ATTRS{{idVendor}}=="{slv3.VENDOR:04x}", ATTRS{{idProduct}}=="{product:04x}", TAG+="uaccess"'
-        for product in slv3.PRODUCTS
-    ]
 
 
 def test_options_are_checked() -> None:

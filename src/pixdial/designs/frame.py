@@ -8,7 +8,7 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from .colour import Theme
 from .geometry import F32, MID, Kit, Ring, inside
@@ -19,6 +19,12 @@ Pixels = NDArray[Any]  # a float picture being drawn, or a finished 8-bit one (m
 Region = tuple[slice, slice]
 TextLayer = tuple[tuple[int, int, int], Region, NDArray[Any]]  # a colour, the box its text covers, the coverage there
 Still = tuple[F32, list[TextLayer]]
+
+
+def tnum(font: ImageFont.FreeTypeFont) -> list[str] | None:
+    """Tabular figures, where Pillow lays text out with raqm; its basic layout takes no font features (a clean install
+    without libraqm or its FriBiDi has only that)."""
+    return ["tnum"] if font.layout_engine == ImageFont.Layout.RAQM else None
 
 
 def paint(px: Pixels, ring: Ring, alpha: F32, colour: Sequence[float] | F32) -> None:
@@ -119,7 +125,7 @@ class Frame:
         font, draw = k.font(weight, size), self.draw(rgb)
         x, y = xy[0] * k.s, xy[1] * k.s
         if not spacing:
-            draw.text((x, y), s, font=font, fill=255, anchor=anchor, features=["tnum"])
+            draw.text((x, y), s, font=font, fill=255, anchor=anchor, features=tnum(font))
             return
         gap = spacing * k.s
         x -= (sum(k.advance(weight, size, c) for c in s) + gap * (len(s) - 1)) / 2
@@ -147,7 +153,7 @@ class Frame:
         s = f"{value:.0f}"
         while True:
             big, small = k.font("Black", size), k.font("Bold", size / 3)
-            ink0, _, ink1, _ = (v / k.s for v in big.getbbox(s, anchor="ls", features=["tnum"]))
+            ink0, _, ink1, _ = (v / k.s for v in big.getbbox(s, anchor="ls", features=tnum(big)))
             x = MID - (ink0 + ink1) / 2  # where the digits start so that their ink is centred
             ux = x + ink1 + size * 0.045
             if size <= 60 or inside((x + ink0, y - size * 0.73, ux + small.getlength(unit) / k.s, y), fit):
@@ -180,7 +186,7 @@ def extent(
         w = sum(kit.advance(weight, size, c) for c in s) / kit.s + spacing * (len(s) - 1)
         _, top, _, bottom = font.getbbox(s, anchor="mm")
         return xy[0] - w / 2, xy[1] + top / kit.s, xy[0] + w / 2, xy[1] + bottom / kit.s
-    x0, y0, x1, y1 = font.getbbox(s, anchor=anchor, features=["tnum"])
+    x0, y0, x1, y1 = font.getbbox(s, anchor=anchor, features=tnum(font))
     return xy[0] + x0 / kit.s, xy[1] + y0 / kit.s, xy[0] + x1 / kit.s, xy[1] + y1 / kit.s
 
 

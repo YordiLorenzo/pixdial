@@ -14,6 +14,8 @@ from .motion import Eased
 class Thermals(Design):
     name = "thermals"
     shows = "CPU, GPU and PSU temperature, each against its own limit"
+    reads = ("cpu_c", "gpu_c", "psu_c")
+    needs = ("cpu_c",)
     about = (
         "Three temperatures as three rings, CPU outside, GPU, PSU inside, each on a scale from its own limit "
         "with a mark at that limit, and each value in the colour of what it means."
