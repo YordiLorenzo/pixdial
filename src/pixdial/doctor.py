@@ -75,8 +75,13 @@ def checks(path: Path | None, wait: Callable[[float], None] = time.sleep) -> Ite
         for name, why in plugins.available(kind, base, builtin)[1].items():
             yield Check(f"plugin {name}", FAIL, why)
     yield from panels(config)
-    yield from layout(config)
-    yield from sources(config, wait)
+    try:
+        built = cfg.sources(config)  # built once: a plugin's source may hold a device until it is closed
+    except cfg.ConfigError as error:
+        yield Check("sources", FAIL, str(error))
+        return
+    yield from layout(config, built)
+    yield from sources(config, built, wait)
 
 
 def upgrade() -> str:
@@ -117,11 +122,11 @@ def unconfigured(config: cfg.Config) -> Check:
     return Check("panels", SKIP, f"none in the config yet; {len(serials)} attached", hint)
 
 
-def layout(config: cfg.Config) -> Iterator[Check]:
+def layout(config: cfg.Config, built: Sequence[tuple[str, Source]]) -> Iterator[Check]:
     try:
         catalog = cfg.catalog(config)
-        specs = cfg.layout(config, catalog).load()
-        left_out = {} if config.rotation and config.layout else cfg.skipped(catalog, cfg.sources(config))
+        specs = cfg.layout(config, catalog, built).load()
+        left_out = {} if config.rotation and config.layout else cfg.skipped(catalog, built)
     except (cfg.ConfigError, ValueError) as error:
         yield Check("layout", FAIL, str(error))
         return
@@ -134,12 +139,7 @@ def layout(config: cfg.Config) -> Iterator[Check]:
         yield Check("designs", SKIP, detail, hint)
 
 
-def sources(config: cfg.Config, wait: Callable[[float], None]) -> Iterator[Check]:
-    try:
-        built = cfg.sources(config)
-    except cfg.ConfigError as error:
-        yield Check("sources", FAIL, str(error))
-        return
+def sources(config: cfg.Config, built: Sequence[tuple[str, Source]], wait: Callable[[float], None]) -> Iterator[Check]:
     optional = config.sources == cfg.DEFAULT_SOURCES  # the config names none, and pixdial runs without each
     for _, source in built:  # a first sample: a load or a power is a change between two
         with contextlib.suppress(Exception):  # the second read reports it

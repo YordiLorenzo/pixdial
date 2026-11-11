@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from pixdial import service
 from pixdial.cli import main
 
 
@@ -95,3 +96,10 @@ def test_a_failed_systemctl_is_reported(
     monkeypatch.setenv("PATH", str(tmp_path / "empty"))  # no systemd
     assert main(["service", "install"]) == 1
     assert "systemctl" in capsys.readouterr().err
+
+
+def test_a_path_with_a_space_or_a_percent_stays_one_argument() -> None:
+    assert service.quoted("/home/u/.local/bin/pixdial") == "/home/u/.local/bin/pixdial"
+    assert service.quoted("/home/u/panel configs/config.toml") == '"/home/u/panel configs/config.toml"'
+    assert service.quoted("/home/u/100%/a$b") == "/home/u/100%%/a$$b"
+    assert service.quoted('/home/u/a "b"\\c') == '"/home/u/a \\"b\\"\\\\c"'
