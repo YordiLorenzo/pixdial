@@ -13,16 +13,28 @@ Supported panels, both round 400 × 400 pixels, on Linux:
 Each LCD needs its own USB cable to a USB 2 header. pixdial draws the screens only:
 it does not control fan speed or RGB lighting.
 
-Requires Python 3.12+ and uv (or pipx). Install from PyPI:
+Requires Python 3.12+ and uv (or pipx). Install from PyPI and set up in three commands:
 
     uv tool install pixdial
+    pixdial setup
+    pixdial service install
+
+`pixdial setup` finds the panels, installs a udev rule through sudo (one password
+prompt), writes ~/.config/pixdial/config.toml and runs the `pixdial doctor` checks.
+`pixdial setup --dry-run` changes nothing. `pixdial service install` runs pixdial now
+and at every login as a systemd user service. `pixdial service remove` undoes it.
+For a bug report: `pixdial doctor --share` (serials, hostname and home folder taken out)
+and `pixdial run --debug --log-file pixdial.log`.
 
 `pixdial render crown --out preview` produces a demo PNG without hardware,
-including on macOS. Website images show demo readings. PSU readings, connector
-currents and agent quota require configured sources.
+including on macOS. Website images show demo readings.
 
-Built-in sensor readers use local files or NVML. No telemetry or network service.
-Configured commands and plugins can use the network and run with the user's permissions.
+Built-in sources: CPU load, RAPL CPU power, AMD GPU (amdgpu, experimental), NVIDIA GPU
+(NVML) and CPU temperature (hwmon). PSU readings, connector currents and agent quota
+require configured sources. The default rotation leaves out designs whose readings no
+source gives. Built-in sensor readers use local files or NVML. No telemetry or network
+service. Configured commands and plugins can use the network and run with the user's
+permissions.
 
 The SL V3 protocol follows sgtaziz/lian-li-linux v1.2.6 (Copyright (c) 2026 sgtaziz, MIT).
 lian-li-linux is a Linux replacement for L-Connect 3: fan speed, pumps, RGB lighting and
