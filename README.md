@@ -33,47 +33,71 @@ You need Linux, Python 3.12 or newer, [uv](https://docs.astral.sh/uv/getting-sta
    `pipx install pixdial` works too. If your shell cannot find `pixdial`, run `uv tool update-shell` and open a
    new terminal.
 
-2. **Give your user access to the panel.** On Linux with udev and an active local login, install the
-   [bundled rule](src/pixdial/data/60-pixdial.rules):
+2. **Set up the panels.**
+
+   ```sh
+   pixdial setup
+   ```
+
+   Setup finds the attached panels and gives your user access to them: it prints the udev commands, then runs
+   them through sudo, which asks for your password once. It writes `~/.config/pixdial/config.toml` with a design
+   for each panel and runs the `pixdial doctor` checks. `pixdial setup --dry-run` shows the same steps and
+   changes nothing. If a display is upside down, add `turn = 180` to its `[[panels]]` table in the config.
+
+3. **Start the service.**
+
+   ```sh
+   pixdial service install
+   ```
+
+   The panels show their designs now and after every login. To try pixdial in a terminal first, run
+   `pixdial run`; Ctrl-C stops it and turns the panels dark.
+
+On a machine where pixdial starts with nobody logged in (linger, or no login at its seat), setup installs a group
+rule instead and adds your user to the `pixdial` group. Log out and back in (with linger, reboot) before step 3.
+
+In another terminal, `pixdial show crown:ember` changes the configured panel's design and theme.
+`pixdial show rotate` cycles through the designs.
+
+<details>
+<summary>Set up by hand</summary>
+
+1. Install the [bundled udev rule](src/pixdial/data/60-pixdial.rules). It gives the user logged in at the machine
+   access to the panels. For a machine nobody logs in to, use the
+   [group rule](docs/config.md#usb-permissions) instead.
 
    ```sh
    sudo tee /etc/udev/rules.d/60-pixdial.rules >/dev/null <<'RULE'
    SUBSYSTEM=="usb", ATTRS{idVendor}=="1cbe", ATTRS{idProduct}=="0005", TAG+="uaccess"
+   SUBSYSTEM=="usb", ATTRS{idVendor}=="1cbe", ATTRS{idProduct}=="0006", TAG+="uaccess"
    RULE
    sudo udevadm control --reload-rules
    sudo udevadm trigger --subsystem-match=usb --action=add
    pixdial devices
    ```
 
-   The rule grants access to this USB model. For a server without a local login, use a group rule as described
-   in [Configuration](docs/config.md#usb-permissions). Run pixdial as your normal user.
+2. Write the config, with the serial that `pixdial devices` printed in place of `YOUR_PANEL_SERIAL`. Add one
+   `[[panels]]` table and one layout entry for each extra panel.
 
-3. **Configure one panel.** Create `~/.config/pixdial/config.toml` (or `$XDG_CONFIG_HOME/pixdial/config.toml`).
-   Replace `YOUR_PANEL_SERIAL` with the value from `pixdial devices`.
-
-   ```toml
+   ```sh
+   mkdir -p ~/.config/pixdial
+   cat > ~/.config/pixdial/config.toml <<'TOML'
    layout = ["crown"]
 
    [[panels]]
    name = "cpu"
    serial = "YOUR_PANEL_SERIAL"
+   TOML
    ```
 
-   Add one `[[panels]]` table and one layout entry for each extra panel. Set `turn = 180` inside a panel's
-   table if its display is upside down.
-
-4. **Check the readings and start.**
+3. Check the readings, then start pixdial.
 
    ```sh
    pixdial doctor
-   pixdial run
+   pixdial service install
    ```
 
-   `doctor` checks panel permissions and reads each source. An unavailable source leaves its readings missing;
-   the others keep working. Ctrl-C stops `run` and turns the connected panels dark.
-
-In another terminal, `pixdial show crown:ember` changes the configured panel's design and theme.
-`pixdial show rotate` cycles through the designs.
+</details>
 
 ## What it does
 
@@ -118,6 +142,8 @@ pixdial does not control fan speed or RGB lighting.
 
 | Command | Use |
 | --- | --- |
+| `pixdial setup` | Find the panels, give your user access, write the config and run the checks; `--dry-run` changes nothing. |
+| `pixdial service install` | Run `run` now and at every login as a systemd user service; `service status` and `service remove` too. |
 | `pixdial run` | Run the configured panels until Ctrl-C or SIGTERM. |
 | `pixdial show crown:ember` | Set one design per configured panel; `show` alone prints the selection, `show rotate` cycles designs. |
 | `pixdial list` | List designs, themes, sources and devices, including installed plugins. |
@@ -215,8 +241,9 @@ otherwise the programs compete for the USB interface.
 
 ### Does it need root?
 
-The panel needs read and write access to its USB device node. The udev rule in the quick start grants that to
-the locally logged-in user. RAPL counters can need separate read permission. pixdial itself runs as your user.
+No. pixdial runs as your user. The panel needs read and write access to its USB device node: `pixdial setup`
+installs a udev rule for that through sudo, after it prints the commands. That is the only step that runs as
+root. RAPL counters can need separate read permission.
 
 ## Development
 
