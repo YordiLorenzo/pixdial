@@ -5,52 +5,66 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-11
+
 ### Added
 
-- Added Python 3.14 to CI and package classifiers.
-- Added a tag-triggered release workflow with version checks, PyPI attestations and GitHub releases from the changelog.
-- Added bug, device request, device test and Radeon issue forms, with questions directed to Discussions.
-- Added a pull request template for hardware-test notes and an issue label and triage guide.
-- Added the Contributor Covenant 2.1 code of conduct with reporting through GitHub.
-- Added systemd user units to the AUR and Nix packages, with package-specific paths and no restart on config errors.
-- Experimental support for the Lian Li UNI FAN TL Wireless LCD (`1cbe:0006`) in the SL V3 driver, with its udev lines.
-- Experimental `amdgpu` source, on by default: AMD GPU temperature, power, utilisation and VRAM, read without root.
-- `pytest -m hardware`: an opt-in test on real panels (frame acknowledgements, 30 frames/s, CPU, memory, a USB
-  reset), left out of the normal run.
+- `pixdial setup` finds the panels, gives your user access to them, writes the config and runs the `doctor`
+  checks. It prints the udev commands, then runs them through sudo, which asks for your password once. On a machine
+  that starts pixdial with nobody logged in, it installs a group rule and adds you to the `pixdial` group.
+  `--dry-run` changes nothing.
+- `pixdial service install`, `remove` and `status` run `pixdial run` at every login as a systemd user service,
+  pointed at the pixdial you installed.
+- `pixdial doctor --share` prints a Markdown report for an issue, with panel serials, the hostname and your home
+  folder taken out.
+- `pixdial run --debug` logs each USB command, its acknowledgement time and a traceback for each error.
+  `--log-file PATH` writes the log to a file.
+- Experimental support for the Lian Li UNI FAN TL Wireless LCD (TL V2, `1cbe:0006`), with its udev lines. It uses
+  the SL V3 protocol; no TL panel has been tested with pixdial yet.
+- An experimental `amdgpu` source, on by default: AMD GPU temperature, power, utilisation and VRAM, read without
+  root.
+- Python 3.14 support.
+- Systemd user units in the AUR and Nix packages.
+- Issue forms for bugs, device requests, device tests and Radeon reports, a pull request template and a code of
+  conduct.
+- `pytest -m hardware`, an opt-in test on real panels: frame acknowledgements at 30 frames/s, CPU, memory and a
+  USB reset.
+- Plugin API: a design can declare the readings it `reads` and `needs`, and a source can say what it `gives()`.
+- A release workflow that publishes tagged versions to PyPI with attestations.
 
 ### Changed
 
-- Prepared AUR and Nix recipes for 0.1.1, with explicit placeholders for the unpublished sdist URL and checksums.
-- Documented tag-triggered releases, Trusted Publishing setup and package updates after publication.
-- `pixdial setup`: finds the panels, gives this user access (it prints the udev commands, then runs them through sudo), writes the config with a layout, and runs the doctor checks. On a machine that lingers or has no login at its seat, it installs a group rule and adds the user to the `pixdial` group. `--dry-run` writes and runs nothing.
-- `service install` says when a headless machine needs the group rule from `setup`.
-- `doctor --share`: a Markdown report for issues (versions, distro, kernel, USB ids, panel firmware, sources, hwmon chips, the readings each design misses), with serials, the hostname and the home folder taken out.
-- `doctor` shows a default source that is missing as "skip" with a hint, and exits 0; with no panels in the config it lists the attached ones and prints a config for them.
-- `doctor` and `devices` name the program that holds a panel, and point to lian-li-linux when another program has claimed it.
+- `doctor` shows a missing default source as "skip" with a hint, and exits 0. With no panels in the config, it
+  lists the attached panels and prints a config for them.
+- `doctor` and `devices` name the program that holds a panel, and point to lian-li-linux when it is another
+  program.
 - `doctor` prints the installed version and the command that upgrades it.
-- `devices` names the USB cable when it finds no panel, and points other Lian Li ids to lian-li-linux and Turing or TURZX ids to turing-smart-screen-python.
-- The default layout and rotation leave out designs whose readings no source gives (psu without a PSU source, gpu without NVIDIA); `doctor` lists them.
-- Plugin API: a design can declare `reads` and `needs`, and a source can say what it `gives()`.
-- `pixdial service install`, `remove` and `status`: the bundled user unit with ExecStart pointed at the running pixdial.
-- A config error (exit status 2) stops the service once instead of restarting it every 10 seconds.
-- Text draws without libraqm: font features go to Pillow only when it has raqm, and `doctor` says whether it has.
-- `pixdial run --debug` logs each USB command with its length and its acknowledgement time, and a traceback for each
-  error.
-- `pixdial run --log-file PATH` writes the log to a file, with the time on each line.
-- `run` logs its panels and sources as it starts. Errors are logged as warnings, the rest as info.
+- `devices` names the USB cable when it finds no panel. It points other Lian Li devices to lian-li-linux, and
+  Turing and TURZX screens to turing-smart-screen-python.
+- The default layout and rotation leave out designs whose readings no source gives, such as psu without a PSU
+  source. `doctor` lists them.
+- `run` logs its panels and sources as it starts, and logs errors as warnings.
+- The README and website set up with `pixdial setup` and `pixdial service install`, and add troubleshooting and
+  undo steps. The PyPI summary names the fan as Lian Li UNI FAN SL Wireless LCD (SL V3).
+- The protocol credit points to lian-li-linux v1.2.6, whose SL V3 code is unchanged since v1.2.4.
 
 ### Fixed
 
-- A frame too big for one SL V3 transfer is sent with 4:2:0 colour, instead of stopping the runtime.
-- A device error other than `OSError` in `show()` is reported for that panel only; the other panels go on.
-- A plugin design that fails in `__init__` is skipped for that panel, instead of stopping the runtime.
-- A list value on a trail key (`cpu_load`, `psu_w`) leaves a gap in the trail, instead of stopping the runtime.
-- Each panel sends its frames from a thread of its own, so a hung panel no longer slows the others to 1 frame/s.
-- After a failed send, a panel is opened again after a wait that doubles from 0.25 s to 10 s, not at once, and the
-  error is logged once, not once per frame.
-- A panel that is unplugged, or not back yet after a resume, is tried again with the same doubling wait, not every
-  10 s, so it is back within about a second of its return.
+- One panel's problem no longer stops every panel. Each of these used to stop the runtime and turn all panels
+  dark; now it stays with its own panel:
+  - a frame too big for one SL V3 transfer: it is sent with 4:2:0 colour;
+  - a device error other than `OSError` while showing a frame: it is logged for that panel, and the others go on;
+  - a plugin design that fails as it starts: it is skipped, and the panel keeps the design it shows;
+  - a list value on a trail key (`cpu_load`, `psu_w`): it leaves a gap in the trail.
+- A hung panel no longer slows the other panels to 1 frame/s: each panel sends its frames from its own thread.
+- After a failed send, pixdial opens the panel again after a wait that doubles from 0.25 s to 10 s, and logs the
+  error once, not once per frame.
+- A panel that is unplugged, or not back yet after a resume, comes back within about a second of its return,
+  not after up to 10 s.
 - A source read under way as the machine went to sleep no longer brings back a reading from before the sleep.
+- A config error (exit status 2) stops the service once, instead of restarting it every 10 seconds.
+- Text draws on a Pillow without raqm (for example without FriBiDi installed), where it failed before; `doctor`
+  says whether Pillow has raqm.
 
 ## [0.1.0] - 2026-11-06
 
@@ -70,5 +84,6 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Prepared GPL-3.0-or-later package metadata and licence; bundled Lato fonts retain their SIL Open Font License.
 - Added CI for Ruff, mypy and pytest on Ubuntu with Python 3.12 and 3.13.
 
-[Unreleased]: https://github.com/YordiLorenzo/pixdial/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/YordiLorenzo/pixdial/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/YordiLorenzo/pixdial/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/YordiLorenzo/pixdial/releases/tag/v0.1.0
