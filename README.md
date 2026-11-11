@@ -214,14 +214,6 @@ or installed plugin can use the network and has your user's permissions; only co
 `render` writes to its output directory; file devices write to the paths you configure.
 See [Architecture](docs/architecture.md) and [Security](SECURITY.md) for the boundaries.
 
-## How this was built
-
-I build pixdial with AI coding agents. They write most of the code, tests and docs; I decide what to build,
-review each change and choose what ships. Every change passes ruff, mypy and pytest in CI on Python 3.12, 3.13
-and 3.14, and the tests compare all 14 designs in 3 themes and 4 states with golden renders. Before a release, an
-opt-in test (`pytest -m hardware`) sends frames to the three SL V3 panels in my own PC and checks that each one
-is acknowledged. I run pixdial on those panels every day, next to lian-li-linux.
-
 ## Credits and alternatives
 
 [sgtaziz/lian-li-linux](https://github.com/sgtaziz/lian-li-linux) is a Linux replacement for L-Connect 3, under
