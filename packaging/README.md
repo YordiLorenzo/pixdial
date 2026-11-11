@@ -1,8 +1,8 @@
 # Packaging
 
 Recipes for package repositories that keep their definitions outside this repo. Both target
-pixdial 0.1.1. The sdist URL and checksum placeholders must be replaced after publication,
-before either package can build. See [Release updates](#release-updates).
+pixdial 0.1.1 and pin its published PyPI sdist. [Release updates](#release-updates) says how to
+move them to a new release.
 Homebrew is intentionally omitted: pixdial drives physical panels only on Linux.
 
 | Target | Files here | Submission destination |
