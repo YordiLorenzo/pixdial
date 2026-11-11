@@ -1,6 +1,6 @@
 # Maintainer: YordiLorenzo <yordilorenzo@gmail.com>
 pkgname=pixdial
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc="A Python SDK and CLI for hardware screens on Linux"
 arch=('any')
@@ -9,8 +9,9 @@ license=('GPL-3.0-or-later' 'OFL-1.1')
 depends=('python>=3.12' 'python-numpy' 'python-pillow' 'python-cryptography')
 makedepends=('python-build' 'python-installer' 'python-hatchling' 'python-hatch-fancy-pypi-readme')
 checkdepends=('python-pytest')
-source=("https://files.pythonhosted.org/packages/2e/2e/8e1bbbf0a6f1407a41a176a872eb71a11a2cc684871a2de225718570bb19/$pkgname-$pkgver.tar.gz")
-sha256sums=('924e5ea534af537ecfca0210d455b8df2a6c16f6bfd204c19d1a696414fb07f2')
+# Replace both placeholders from PyPI after 0.1.1 is published. See packaging/README.md.
+source=("https://files.pythonhosted.org/packages/REPLACE_WITH_0.1.1_SDIST_PATH/$pkgname-$pkgver.tar.gz")
+sha256sums=('REPLACE_WITH_0.1.1_SDIST_SHA256')
 
 build() {
   cd "$pkgname-$pkgver"
@@ -27,6 +28,10 @@ package() {
   cd "$pkgname-$pkgver"
   python -m installer --destdir="$pkgdir" dist/*.whl
   install -Dm644 src/pixdial/data/60-pixdial.rules "$pkgdir/usr/lib/udev/rules.d/60-pixdial.rules"
+  install -Dm644 src/pixdial/data/pixdial.service "$pkgdir/usr/lib/systemd/user/pixdial.service"
+  sed -i -e '/^#/d' -e 's|^ExecStart=.*|ExecStart=/usr/bin/pixdial run|' \
+    -e '/^RestartPreventExitStatus=/d' -e '/^\[Service\]$/a RestartPreventExitStatus=2' \
+    "$pkgdir/usr/lib/systemd/user/pixdial.service"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 src/pixdial/fonts/LICENSE-Lato.txt "$pkgdir/usr/share/licenses/$pkgname/LICENSE-Lato.txt"
 }

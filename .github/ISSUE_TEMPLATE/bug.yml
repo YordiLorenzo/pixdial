@@ -1,0 +1,72 @@
+name: Bug report
+description: Report a problem with pixdial.
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Remove serial numbers, private paths and credentials from logs before posting.
+        If a command fails, paste the error instead of its output.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe what you expected, what happened and the steps to reproduce it.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: pixdial version
+      description: Run `pixdial --version`.
+    validations:
+      required: true
+  - type: input
+    id: distro
+    attributes:
+      label: Linux distribution and version
+    validations:
+      required: true
+  - type: input
+    id: kernel
+    attributes:
+      label: Kernel version
+      description: Run `uname -r`.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Diagnostic report
+      description: Paste the output of `pixdial doctor --share`.
+    validations:
+      required: true
+  - type: textarea
+    id: usb
+    attributes:
+      label: USB devices
+      description: Paste the output of `lsusb | grep 1cbe`. Say if it returns nothing.
+      render: text
+    validations:
+      required: true
+  - type: dropdown
+    id: lian-li-linux
+    attributes:
+      label: Is lian-li-linux running?
+      options:
+        - "Yes"
+        - "No"
+        - "Not sure"
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Debug log
+      description: |
+        Run `pixdial run --debug --log-file pixdial.log`, reproduce the problem, then stop it with Ctrl+C.
+        Paste or attach pixdial.log after removing private details.
+        If you cannot run the command, explain why.
+    validations:
+      required: true

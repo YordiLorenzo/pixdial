@@ -1,8 +1,8 @@
 # Packaging
 
-Recipes for package repositories that keep their definitions outside this repo. Both pin
-the released PyPI sdist for pixdial 0.1.0. Update the version and checksum for each release,
-and the content-addressed PyPI URL in `PKGBUILD`, then regenerate `.SRCINFO`.
+Recipes for package repositories that keep their definitions outside this repo. Both target
+pixdial 0.1.1. The sdist URL and checksum placeholders must be replaced after publication,
+before either package can build. See [Release updates](#release-updates).
 Homebrew is intentionally omitted: pixdial drives physical panels only on Linux.
 
 | Target | Files here | Submission destination |
@@ -31,6 +31,7 @@ system configuration and rebuild with `sudo nixos-rebuild switch`:
 ```nix
 environment.systemPackages = [ pkgs.pixdial ];
 services.udev.packages = [ pkgs.pixdial ];
+systemd.packages = [ pkgs.pixdial ];
 ```
 
 Reconnect the panel if access has not updated. On other Linux distributions using Nix,
@@ -40,6 +41,24 @@ alternative described in the rule's comments.
 
 Both recipes retain the project's GPL-3.0-or-later licence and the bundled Lato fonts'
 OFL-1.1 notice.
+
+## User service
+
+The AUR package installs `pixdial.service` at `/usr/lib/systemd/user/pixdial.service`
+with `ExecStart=/usr/bin/pixdial run`. The Nix package installs the same unit at
+`$out/lib/systemd/user/pixdial.service`, with `ExecStart` pointing to `$out/bin/pixdial`
+in the Nix store. On NixOS, `systemd.packages` above makes the packaged unit available.
+Both units set `RestartPreventExitStatus=2`, so a config error does not restart forever.
+
+After creating your pixdial config, start the packaged service as your user:
+
+```sh
+systemctl --user daemon-reload
+systemctl --user enable --now pixdial.service
+```
+
+A unit in `~/.config/systemd/user/pixdial.service` takes precedence over the packaged unit.
+Check `systemctl --user cat pixdial.service` if it still points to a previous installation.
 
 ## AUR
 
@@ -70,7 +89,7 @@ OFL-1.1 notice.
 
    ```sh
    git add PKGBUILD .SRCINFO
-   git commit -m "pixdial 0.1.0"
+   git commit -m "pixdial 0.1.1"
    git push
    ```
 
@@ -84,15 +103,15 @@ with `makepkg --printsrcinfo` on Arch before submitting.
 | ----- | ------------------ |
 | `pkgbase`, `pkgname` | Both use `pkgname`: `pixdial` (one package). |
 | `pkgdesc` | Literal `pkgdesc`: `A Python SDK and CLI for hardware screens on Linux`. |
-| `pkgver`, `pkgrel` | `0.1.0`, `1`. |
+| `pkgver`, `pkgrel` | `0.1.1`, `1`. |
 | `url` | `https://github.com/YordiLorenzo/pixdial`. |
 | `arch` | One row from `arch`: `any` (pure Python; Arch is Linux). |
 | `license` | Two rows from `license`: `GPL-3.0-or-later`, `OFL-1.1`. |
 | `checkdepends` | One row: `python-pytest`. |
 | `makedepends` | Four rows: `python-build`, `python-installer`, `python-hatchling`, `python-hatch-fancy-pypi-readme`. |
 | `depends` | Four rows: `python>=3.12`, `python-numpy`, `python-pillow`, `python-cryptography`. |
-| `source` | The literal PyPI URL with `$pkgname` and `$pkgver` expanded to `pixdial` and `0.1.0`. |
-| `sha256sums` | `924e5ea534af537ecfca0210d455b8df2a6c16f6bfd204c19d1a696414fb07f2`. |
+| `source` | The PyPI URL with `$pkgname` and `$pkgver` expanded to `pixdial` and `0.1.1`; its path is a placeholder until publication. |
+| `sha256sums` | `REPLACE_WITH_0.1.1_SDIST_SHA256` until publication. |
 
 The maintainer comment and `build()`, `check()` and `package()` functions are not `.SRCINFO`
 fields. No split-package overrides or extra metadata fields are used.
@@ -121,7 +140,7 @@ fields. No split-package overrides or extra metadata fields are used.
      };
    ```
 
-3. In the nixpkgs checkout, build and check the installed executable and udev rule:
+3. In the nixpkgs checkout, build and check the installed executable, udev rule and user unit:
 
    ```sh
    cd ../nixpkgs
@@ -129,17 +148,25 @@ fields. No split-package overrides or extra metadata fields are used.
    nix-build -A pixdial
    ./result/bin/pixdial --version
    test -f result/lib/udev/rules.d/60-pixdial.rules
+   test -f result/lib/systemd/user/pixdial.service
    ```
 
    The build runs pytest through `pytestCheckHook` and checks that `pixdial` imports.
 4. Commit any new maintainer entry separately as `maintainers: add yordilorenzo`, then
-   the derivation as `pixdial: init at 0.1.0`. Push your branch and open a nixpkgs pull
+   the derivation as `pixdial: init at 0.1.1`. Push your branch and open a nixpkgs pull
    request with the build results. A PyPI upload token is not needed for this submission.
 
 ## Release updates
 
-Follow [Releasing](../CONTRIBUTING.md#releasing) first. Copy the new sdist URL and SHA256
-from PyPI, update `pkgver`, reset `pkgrel` to `1`, and replace `source` and `sha256sums` in
-`aur/PKGBUILD`. Regenerate `.SRCINFO` on Arch. Update `version` and the SRI `hash` in
-`nix/package.nix`; `nix hash convert --hash-algo sha256 --to sri HEX_SHA256` converts the
-same sdist checksum. Rebuild both packages before submitting their updates.
+Follow [Releasing](../CONTRIBUTING.md#releasing) first. The content-addressed PyPI sdist
+URL and its checksum are not known before publication. The `REPLACE_WITH_0.1.1_*`
+values in `aur/PKGBUILD`, `aur/.SRCINFO` and `nix/package.nix` are deliberate placeholders,
+not usable source paths or hashes. Do not submit them or replace the checksum with `SKIP`.
+
+After the release workflow has published 0.1.1, read the sdist entry in
+`https://pypi.org/pypi/pixdial/0.1.1/json`. Copy its `url` and `digests.sha256` into
+`source` and `sha256sums` in `aur/PKGBUILD`. Keep `pkgver=0.1.1` and `pkgrel=1`, then
+regenerate `.SRCINFO` with `makepkg --printsrcinfo` on Arch. Replace the SRI `hash` in
+`nix/package.nix`; `nix hash convert --hash-algo sha256 --to sri HEX_SHA256` converts
+the same sdist checksum. For later releases, update both versions and reset `pkgrel`
+to `1`. Rebuild both packages before submitting their updates.

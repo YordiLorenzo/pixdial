@@ -22,7 +22,7 @@ uv run mypy
 uv run pytest -q
 ```
 
-CI runs on Ubuntu with Python 3.12 and 3.13. `mypy` uses the strict settings and file list in `pyproject.toml`.
+CI runs on Ubuntu with Python 3.12, 3.13 and 3.14. `mypy` uses the strict settings and file list in `pyproject.toml`.
 Tests use fake hardware and synthetic readings; no attached panel is needed.
 Format files you change with `uv run ruff format PATH`, then rerun the checks.
 
@@ -112,24 +112,17 @@ sitemap, but does not override that origin-wide file.
 
 ## Releasing
 
-1. Bump the version in `pyproject.toml` and `src/pixdial/__init__.py`, refresh `uv.lock`
-   with `uv lock`, and update `CHANGELOG.md`. Run the CI checks above.
-2. Commit the release changes and create the matching `vX.Y.Z` git tag.
-3. Build and validate the release artifacts:
-
-   ```sh
-   uv build
-   uvx twine check dist/pixdial-X.Y.Z*
-   ```
-
-   Replace `X.Y.Z` with the release version and check the sdist and wheel before uploading.
-4. Publish those artifacts with `uv publish dist/pixdial-X.Y.Z*`, push the release commit
-   and tag, and create the GitHub release with `gh release create vX.Y.Z dist/pixdial-X.Y.Z*`.
-   Use the changelog entry as the release notes. Publishing requires PyPI credentials and
-   GitHub push/release access.
-5. Update the version and sdist hash in [packaging/](packaging/README.md), including the
-   AUR source URL and `.SRCINFO`. Build and submit the AUR and nixpkgs updates using that
-   directory's instructions.
+Set the release version in `pyproject.toml`, refresh `uv.lock` with `uv lock`, and move
+the Unreleased notes into a `## [X.Y.Z] - YYYY-MM-DD` section in `CHANGELOG.md`.
+Run the CI checks above and commit the release changes. Before the first release, create
+the GitHub environment `pypi` and configure PyPI Trusted Publishing for owner `YordiLorenzo`,
+repository `pixdial`, workflow `release.yml` and environment `pypi`. Push the release commit
+and matching `vX.Y.Z` tag. The tag starts `.github/workflows/release.yml`, which checks the
+version and changelog, builds the sdist and wheel with uv, and runs `twine check --strict`.
+It publishes to PyPI with attestations, then creates the GitHub release from that changelog
+section and attaches both distributions. Check that all three jobs pass. Finally, replace
+the PyPI URL and checksum placeholders in [packaging/](packaging/README.md), regenerate
+`.SRCINFO` on Arch, and build both packages before submitting their updates.
 
 ## Send a change
 

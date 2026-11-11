@@ -1,0 +1,40 @@
+name: Device request
+description: Request support for a screen.
+title: "[Device request] "
+labels: [device-request]
+body:
+  - type: input
+    id: model
+    attributes:
+      label: Manufacturer and exact model
+      description: Include a product link if available.
+    validations:
+      required: true
+  - type: textarea
+    id: usb
+    attributes:
+      label: USB descriptors
+      description: |
+        Run `lsusb -v -d VID:PID` with the device's vendor and product IDs.
+        Paste the output after removing serial numbers. Include any permission errors.
+      render: text
+    validations:
+      required: true
+  - type: dropdown
+    id: can-test
+    attributes:
+      label: Can you test changes on this device?
+      options:
+        - "Yes"
+        - "No"
+    validations:
+      required: true
+  - type: textarea
+    id: protocol
+    attributes:
+      label: Public protocol reference or capture
+      description: |
+        Link to public protocol documentation, an existing driver or a USB capture you can share.
+        Remove private details from captures. Say if no reference or capture is available.
+    validations:
+      required: true

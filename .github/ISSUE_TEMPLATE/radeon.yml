@@ -1,0 +1,27 @@
+name: Radeon report
+description: Report which readings work on your AMD Radeon card.
+title: "[Radeon] "
+body:
+  - type: input
+    id: card
+    attributes:
+      label: Radeon card model
+      description: Give the exact model. List each card if you have more than one.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Diagnostic report
+      description: Paste the output of `pixdial doctor --share` or the error if it fails.
+    validations:
+      required: true
+  - type: textarea
+    id: readings
+    attributes:
+      label: Readings and result
+      description: |
+        Say which GPU readings appear and which are missing or wrong.
+        Include the design used and any comparison readings. Remove private details from logs.
+    validations:
+      required: true

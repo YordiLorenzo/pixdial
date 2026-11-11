@@ -1,0 +1,49 @@
+name: Device test report
+description: Share results from a real panel.
+title: "[Device test] "
+body:
+  - type: input
+    id: model
+    attributes:
+      label: Panel model and USB ID
+      description: Give the exact model, VID:PID and firmware version if known. Do not include serial numbers.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: pixdial version or commit tested
+      description: Run `pixdial --version`. Include the commit if testing an unreleased change.
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Distribution and kernel
+      description: Give the distribution version and the output of `uname -r`.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Diagnostic report
+      description: Paste the output of `pixdial doctor --share` or the error if it fails.
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: Test steps and results
+      description: |
+        List the commands or config used, panel count, designs and how long the test ran.
+        Say what worked and what failed. Include shutdown, reconnect and resume results if tested.
+        Say whether lian-li-linux was running. Link the device request or pull request if there is one.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs, photos or video
+      description: |
+        Attach any evidence of the result, including errors.
+        Remove serial numbers, private paths and credentials before posting.

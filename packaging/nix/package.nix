@@ -7,13 +7,14 @@
 
 python3Packages.buildPythonApplication (finalAttrs: {
   pname = "pixdial";
-  version = "0.1.0";
+  version = "0.1.1";
   pyproject = true;
   disabled = python3Packages.pythonOlder "3.12";
 
   src = fetchPypi {
     inherit (finalAttrs) pname version;
-    hash = "sha256-kk5epTSvU37PygIQ1FW43ypsFva/0gTBnRppZBT7B/I=";
+    # Replace with the published 0.1.1 sdist's SRI hash. See packaging/README.md.
+    hash = "REPLACE_WITH_0.1.1_SDIST_SRI_SHA256";
   };
 
   build-system = with python3Packages; [
@@ -29,6 +30,10 @@ python3Packages.buildPythonApplication (finalAttrs: {
 
   postInstall = ''
     install -Dm644 src/pixdial/data/60-pixdial.rules "$out/lib/udev/rules.d/60-pixdial.rules"
+    install -Dm644 src/pixdial/data/pixdial.service "$out/lib/systemd/user/pixdial.service"
+    sed -i -e '/^#/d' -e "s|^ExecStart=.*|ExecStart=$out/bin/pixdial run|" \
+      -e '/^RestartPreventExitStatus=/d' -e '/^\[Service\]$/a RestartPreventExitStatus=2' \
+      "$out/lib/systemd/user/pixdial.service"
     install -Dm644 LICENSE "$out/share/licenses/pixdial/LICENSE"
     install -Dm644 src/pixdial/fonts/LICENSE-Lato.txt "$out/share/licenses/pixdial/LICENSE-Lato.txt"
   '';
