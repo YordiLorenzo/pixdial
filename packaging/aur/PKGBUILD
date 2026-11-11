@@ -2,7 +2,7 @@
 pkgname=pixdial
 pkgver=0.1.1
 pkgrel=1
-pkgdesc="A Python SDK and CLI for hardware screens on Linux"
+pkgdesc="Live hardware readings on Lian Li UNI FAN SL Wireless LCD (SL V3) fan screens"
 arch=('any')
 url="https://github.com/YordiLorenzo/pixdial"
 license=('GPL-3.0-or-later' 'OFL-1.1')

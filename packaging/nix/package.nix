@@ -43,7 +43,7 @@ python3Packages.buildPythonApplication (finalAttrs: {
   pythonImportsCheck = [ "pixdial" ];
 
   meta = {
-    description = "Python SDK and CLI for hardware screens on Linux";
+    description = "Live hardware readings on Lian Li UNI FAN SL Wireless LCD (SL V3) fan screens";
     homepage = "https://github.com/YordiLorenzo/pixdial";
     changelog = "https://github.com/YordiLorenzo/pixdial/releases/tag/v${finalAttrs.version}";
     license = with lib.licenses; [

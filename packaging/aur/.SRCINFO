@@ -1,5 +1,5 @@
 pkgbase = pixdial
-	pkgdesc = A Python SDK and CLI for hardware screens on Linux
+	pkgdesc = Live hardware readings on Lian Li UNI FAN SL Wireless LCD (SL V3) fan screens
 	pkgver = 0.1.1
 	pkgrel = 1
 	url = https://github.com/YordiLorenzo/pixdial

@@ -22,7 +22,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Experimental support for the Lian Li UNI FAN TL Wireless LCD (TL V2, `1cbe:0006`), with its udev lines. It uses
   the SL V3 protocol; no TL panel has been tested with pixdial yet.
 - An experimental `amdgpu` source, on by default: AMD GPU temperature, power, utilisation and VRAM, read without
-  root.
+  root. On a processor's built-in GPU it leaves out power, which there includes the CPU.
 - Python 3.14 support.
 - Systemd user units in the AUR and Nix packages.
 - Issue forms for bugs, device requests, device tests and Radeon reports, a pull request template and a code of
