@@ -17,8 +17,9 @@ from .report import Report
 log = logging.getLogger(__name__)
 
 # s: the wait before the next try to open a panel that failed (unplugged, held by another program, or not back yet
-# after a resume), doubled for each failure in a row up to RETRY_MAX
-RETRY_FIRST, RETRY_MAX = 0.2, 10.0
+# after a resume), doubled for each failure in a row up to RETRY_MAX. On the rig, SL V3 panels took 0.25 to 1.27 s
+# after a USB reset to take a frame again
+RETRY_FIRST, RETRY_MAX = 0.25, 10.0
 
 
 class Sender:
@@ -115,7 +116,7 @@ class Sender:
         self.close()
         self.wait = RETRY_FIRST if worked or not self.wait else min(2 * self.wait, RETRY_MAX)
         self.retry_at = self.clock() + self.wait
-        log.debug("next try in %.1f s", self.wait)
+        log.debug("next try in %g s", self.wait)
 
     def close(self) -> None:
         if self.open:

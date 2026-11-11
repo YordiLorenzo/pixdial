@@ -223,8 +223,8 @@ def test_a_panel_that_will_not_open_is_tried_after_a_wait_that_doubles(tmp_path:
     rig.set(cpu_c=40)
     rig.run_for(40)
     waits = [b - a for a, b in itertools.pairwise(rig.panels[0].opened)]
-    assert waits == pytest.approx([0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 10], abs=0.11)  # a tick's lag at most
-    assert rig.panels[0].frames[0][0] == pytest.approx(1022.6, abs=0.11)
+    assert waits == pytest.approx([0.25, 0.5, 1, 2, 4, 8, 10], abs=0.11)  # a tick's lag at most
+    assert rig.panels[0].frames[0][0] == pytest.approx(1025.75, abs=0.11)
     assert [line for line in rig.lines if "panel" in line] == ["0 panel: busy", "0 panel: working, info fake"]
 
 
@@ -261,16 +261,16 @@ def test_a_resume_reopens_the_panels_at_once_and_resets_the_sources(tmp_path: Pa
     assert rig.sampler.epoch == 1
 
 
-def test_a_panel_slow_to_come_back_after_a_resume_is_back_within_a_second(tmp_path: Path) -> None:
-    panel = Unplugged(1001, 1001.7)  # it takes 0.7 s to show up as a USB device again
+def test_a_panel_slow_to_come_back_after_a_resume_is_back_soon_after_it_shows_up(tmp_path: Path) -> None:
+    panel = Unplugged(1001, 1002.27)  # it takes 1.27 s to take a frame again, as two panels did on the rig
     rig = Rig(tmp_path, ("minimal",), [panel])
     rig.set(cpu_c=40)
     rig.run_for(1)
     rig.clock.asleep += 3600
     sent = len(panel.frames)
     rig.run_for(2)
-    assert panel.opened[1:] == pytest.approx([1001, 1001.2, 1001.6, 1002.4], abs=0.11)
-    assert panel.frames[sent][0] == pytest.approx(1002.4, abs=0.11)
+    assert panel.opened[1:] == pytest.approx([1001, 1001.25, 1001.75, 1002.75], abs=0.11)
+    assert panel.frames[sent][0] == pytest.approx(1002.75, abs=0.11)
 
 
 def test_a_panel_unplugged_mid_run_is_back_soon_after_it_is_plugged_in(tmp_path: Path) -> None:
@@ -278,8 +278,8 @@ def test_a_panel_unplugged_mid_run_is_back_soon_after_it_is_plugged_in(tmp_path:
     rig.set(cpu_c=40, psu_w=300, working=2)  # psu animates: a frame every tick
     rig.run_for(15)
     back = [t for t, _ in rig.panels[0].frames if t >= 1010]
-    # Tries at 10.2 and 10.6 s still find it gone; each of the 3 tries can lag a tick (1/30 s) on the rig's clock
-    assert back and back[0] == pytest.approx(1011.4, abs=0.15)
+    # Tries at 10.25 and 10.75 s still find it gone; each of the 3 tries can lag a tick (1/30 s) on the rig's clock
+    assert back and back[0] == pytest.approx(1011.75, abs=0.15)
     assert [line for line in rig.lines if line.startswith("0 panel")] == [
         "0 panel: working, info fake",
         f"0 panel: [Errno {errno.ENODEV}] No such device",
@@ -434,7 +434,8 @@ def test_a_hung_panel_holds_up_no_other(tmp_path: Path) -> None:
     rig.run_live(3)
     healthy = [t for t, _ in rig.panels[1].frames]
     assert len(healthy) / (healthy[-1] - healthy[0]) >= 25  # frames a second; 1 when the hung panel held it up
-    assert len([line for line in rig.lines if line.startswith("0 panel")]) <= hung.opens  # one per retry at most
+    lines = [line for line in rig.lines if line.startswith("0 panel")]
+    assert len(lines) <= hung.opens  # the break, then one line per try at most (opens: the first, then the tries)
 
 
 def test_a_panel_that_fails_every_frame_waits_longer_each_time_and_says_so_once(tmp_path: Path) -> None:
@@ -443,7 +444,7 @@ def test_a_panel_that_fails_every_frame_waits_longer_each_time_and_says_so_once(
     rig.set(psu_w=300, working=2)
     rig.run_for(60)
     waits = [b - a for a, b in itertools.pairwise(panel.opened)]
-    assert waits == pytest.approx([0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 10, 10, 10, 10], abs=0.04)  # a tick's lag at most
+    assert waits == pytest.approx([0.25, 0.5, 1, 2, 4, 8, 10, 10, 10, 10], abs=0.04)  # a tick's lag at most
     assert [line for line in rig.lines if "panel" in line] == ["0 panel: [Errno 5] Input/output error"]
 
 
@@ -456,3 +457,30 @@ def test_a_panel_gets_the_newest_frame_and_no_older_one(tmp_path: Path) -> None:
     rig.pump()
     rig.pump()
     assert [image for _, image in rig.panels[0].frames[sent:]] == [frames[2]]
+
+
+class ShutDown(Panel):
+    """A panel whose transport shut down once, as one did on the rig right after a USB reset."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.failed = False
+
+    def show(self, image: Image.Image) -> None:
+        if not self.failed:
+            self.failed = True
+            raise OSError(errno.ESHUTDOWN, "Cannot send after transport endpoint shutdown")
+        super().show(image)
+
+
+def test_a_transport_shut_down_on_a_send_is_opened_again_after_the_first_wait(tmp_path: Path) -> None:
+    panel = ShutDown()
+    rig = Rig(tmp_path, ("psu",), [panel])
+    rig.set(psu_w=300, working=2)
+    rig.run_for(1)
+    assert panel.closes == 1 and panel.opened == pytest.approx([1000, 1000.25], abs=0.04)
+    assert panel.frames[0][0] == pytest.approx(1000.25, abs=0.04) and len(panel.frames) > 20
+    assert [line for line in rig.lines if "panel" in line] == [
+        f"0 panel: [Errno {errno.ESHUTDOWN}] Cannot send after transport endpoint shutdown",
+        "0 panel: working, info fake",
+    ]

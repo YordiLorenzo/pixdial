@@ -20,7 +20,7 @@ the device. Designs contain no I/O; sources and devices handle it at either end.
 5. A changed frame goes to the panel's own thread, which sends the newest frame it has, so a slow or hung panel
    holds up only itself. An unchanged frame is resent after 30 seconds; switching designs blends over 0.4 seconds.
 
-After a failed open or send, the panel is closed and tried again after a wait that doubles from 0.2 to 10 seconds
+After a failed open or send, the panel is closed and tried again after a wait that doubles from 0.25 to 10 seconds
 (`RETRY_FIRST` and `RETRY_MAX` in `runtime/sender.py`). The error is logged once, not once per frame. A source
 failure does not stop other sources. A design that fails as it starts or while it draws, and a device error, are
 reported for that panel only: the other panels go on. A design that fails as it starts is skipped, and its panel

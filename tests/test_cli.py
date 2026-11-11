@@ -104,7 +104,7 @@ def test_run_debug_logs_to_a_file_with_the_time_level_thread_and_tracebacks(conf
     assert re.match(r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} INFO \[MainThread\] pixdial ", text)
     assert "WARNING [panel top] top panel: [Errno 21] Is a directory" in text
     assert "Traceback (most recent call last)" in text and "IsADirectoryError" in text
-    assert "DEBUG [panel top] next try in 0.2 s" in text
+    assert "DEBUG [panel top] next try in 0.25 s" in text
 
 
 def test_run_says_when_it_cannot_write_its_log_file(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
