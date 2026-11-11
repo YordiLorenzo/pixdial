@@ -18,9 +18,11 @@ currents and agent quota require configured sources.
 Built-in sensor readers use local files or NVML. No telemetry or network service.
 Configured commands and plugins can use the network and run with the user's permissions.
 
-The SL V3 protocol follows sgtaziz/lian-li-linux v1.2.4, an existing MIT-licensed
-alternative with presets, templates and a layout editor. Use only one program per panel.
-pixdial is not affiliated with Lian Li.
+The SL V3 protocol follows sgtaziz/lian-li-linux v1.2.6 (Copyright (c) 2026 sgtaziz, MIT).
+lian-li-linux is a Linux replacement for L-Connect 3: fan speed, pumps, RGB lighting and
+LCDs with images, GIFs, video, sensor presets, templates and a template editor. The two
+run side by side: lian-li-linux keeps fans and RGB, and pixdial draws the LCDs once they
+are out of lian-li-linux's LCD list. pixdial is not affiliated with Lian Li.
 
 ## Links
 

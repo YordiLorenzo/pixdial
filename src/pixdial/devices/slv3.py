@@ -1,10 +1,11 @@
 """Lian Li UNI FAN SL V3 Wireless LCD (USB 1cbe:0005): a round 400 x 400 panel that shows JPEG frames.
 
-The protocol, as lian-li-linux's daemon speaks it (lianli-devices slv3_lcd.rs and crypto.rs, v1.2.4): every command
-is a 512-byte header, DES-CBC encrypted with key and IV "slv3tuzx": the command, 0x1a 0x6d, a millisecond stamp that
-only rises, the parameters. A frame is the header of command 0x65 with the JPEG's size, then the JPEG, zero-padded
-to 102,400 bytes and written in 16 KB pieces (usbfs.Bulk), as the daemon's libusb transfer reaches the panel; the
-panel acknowledges each command on the IN endpoint. This driver sends only what the daemon sends in normal use: its
+The protocol, as lian-li-linux's daemon speaks it (lianli-devices slv3_lcd.rs and crypto.rs, v1.2.6;
+https://github.com/sgtaziz/lian-li-linux, Copyright (c) 2026 sgtaziz, MIT): every command is a 512-byte header,
+DES-CBC encrypted with key and IV "slv3tuzx": the command, 0x1a 0x6d, a millisecond stamp that only rises, the
+parameters. A frame is the header of command 0x65 with the JPEG's size, then the JPEG, zero-padded to 102,400 bytes
+and written in 16 KB pieces (usbfs.Bulk), as the daemon's libusb transfer reaches the panel; the panel acknowledges
+each command on the IN endpoint. This driver sends only what the daemon sends in normal use: its
 start-up queries, frames and brightness. Never the reboot, rotate, startup image or storage commands, and nothing
 that writes the panel's firmware.
 

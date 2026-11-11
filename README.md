@@ -208,10 +208,12 @@ See [Architecture](docs/architecture.md) and [Security](SECURITY.md) for the bou
 
 ## Credits and alternatives
 
-[sgtaziz/lian-li-linux](https://github.com/sgtaziz/lian-li-linux) already supports these screens on Linux, with
-presets, templates and a layout editor, under the MIT licence. pixdial's SL V3 protocol implementation follows
-its daemon's `slv3_lcd.rs` and `crypto.rs` at v1.2.4. Choose it if you want to build layouts in an editor;
-pixdial focuses on its supplied designs, hardware-derived ranges and Python plugins.
+[sgtaziz/lian-li-linux](https://github.com/sgtaziz/lian-li-linux) is a Linux replacement for L-Connect 3, under
+the MIT licence. It controls fan speed, pumps and RGB lighting on many Lian Li devices, and drives their LCDs with
+images, GIFs, video, sensor presets, templates and a template editor. pixdial's SL V3 driver follows its daemon's
+`slv3_lcd.rs` and `crypto.rs` at v1.2.6 (Copyright (c) 2026 sgtaziz, MIT). Choose lian-li-linux for the fans, the
+RGB and layouts you build in an editor. pixdial draws the LCDs only, with its own designs, hardware-derived ranges
+and Python plugins, and runs beside it.
 
 Rendering uses [Pillow](https://python-pillow.org/) and [NumPy](https://numpy.org/), with
 [cryptography](https://cryptography.io/) for the panel's command headers. The bundled
