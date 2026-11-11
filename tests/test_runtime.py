@@ -459,6 +459,19 @@ def test_a_panel_gets_the_newest_frame_and_no_older_one(tmp_path: Path) -> None:
     assert [image for _, image in rig.panels[0].frames[sent:]] == [frames[2]]
 
 
+def test_a_panel_unplugged_mid_run_comes_back_on_the_real_clock(tmp_path: Path) -> None:
+    start = time.monotonic()
+    unplugged = Unplugged(start + 0.5, start + 1.0)
+    rig = Rig(tmp_path, ("cheap", "cheap"), [unplugged, Panel()], more={"cheap": Cheap}, live=True)
+    rig.run_live(2.5)
+    back = [t for t, _ in unplugged.frames if t >= unplugged.back]
+    assert back and back[0] - unplugged.back < 0.5  # tried 0.25 and 0.75 s after it went; 10 s later in 0.1.0
+    lines = [line for line in rig.lines if line.startswith("0 panel")][1:]  # after it first worked
+    assert len(lines) <= unplugged.opens  # the break, then one line per try at most (opens: the first, then the tries)
+    healthy = [t for t, _ in rig.panels[1].frames]
+    assert len(healthy) / (healthy[-1] - healthy[0]) >= 25
+
+
 class ShutDown(Panel):
     """A panel whose transport shut down once, as one did on the rig right after a USB reset."""
 
