@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
+from typing import ClassVar
 
 from ..readings import Reading
 
@@ -14,6 +15,7 @@ class Source(ABC):
     called again a period later. A reading that hasn't come for stale_after seconds counts as missing."""
 
     period = 1.0
+    note: ClassVar[str] = ""  # what `list` prints beside its name, such as "experimental"
 
     @property
     def stale_after(self) -> float:

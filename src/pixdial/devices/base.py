@@ -4,17 +4,20 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import ClassVar
 
 from PIL import Image
 
 
 @dataclass(frozen=True)
 class Found:
-    """A panel attached now: its id (what a config names it by), where it is, and whether this user may open it."""
+    """A panel attached now: its id (what a config names it by), where it is, whether this user may open it, and what
+    `devices` notes beside it (a model that is only experimental)."""
 
     id: str
     where: str
     access: bool
+    note: str = ""
 
 
 class Device(ABC):
@@ -23,6 +26,7 @@ class Device(ABC):
 
     size = (400, 400)
     id = ""  # what discover() calls it (a serial)
+    note: ClassVar[str] = ""  # what `list` prints beside its name: the models it drives, what is experimental
 
     @classmethod
     def discover(cls) -> list[Found]:

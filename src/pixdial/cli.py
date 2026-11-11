@@ -6,7 +6,7 @@ import argparse
 import signal
 import sys
 import threading
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from . import NAME, __version__, demo, doctor, plugins
@@ -93,9 +93,13 @@ def list_all(args: argparse.Namespace) -> int:
     for name, cls in designs.items():
         print(f"  {name:10} {cls.shows}{f' (animated, {cls.fps} frames/s)' if cls.fps else ''}")
     print(f"themes: {', '.join(THEMES)} (name:theme; {config.theme} is the default)")
-    for kind, base, builtin in (("sources", Source, SOURCES), ("devices", Device, DEVICES)):
+    kinds: tuple[tuple[str, type[Source | Device], Mapping[str, type[Source | Device]]], ...] = (
+        ("sources", Source, SOURCES),
+        ("devices", Device, DEVICES),
+    )
+    for kind, base, builtin in kinds:
         found, more = plugins.available(kind, base, builtin)
-        print(f"{kind}: {', '.join(found)}")
+        print(f"{kind}: {', '.join(f'{name} ({cls.note})' if cls.note else name for name, cls in found.items())}")
         broken |= more
     for name, why in broken.items():
         print(f"broken plugin {name}: {why}", file=sys.stderr)
@@ -110,7 +114,7 @@ def devices(args: argparse.Namespace) -> int:
             found += 1
             access = "ok" if panel.access else "no access (`doctor` says how to fix it)"
             where = f"panel {panels[panel.id]!r}" if panel.id in panels else "not in the config"
-            print(f"{kind}  {panel.id}  {panel.where}  {access}  {where}")
+            print(f"{kind}  {panel.id}  {panel.where}  {access}  {where}" + (f"  ({panel.note})" if panel.note else ""))
     if not found:
         print("no panels attached", file=sys.stderr)
     return OK if found else SHORT

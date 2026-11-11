@@ -8,6 +8,7 @@ import pytest
 from PIL import Image
 
 from pixdial.cli import main
+from pixdial.devices import Found, Slv3
 
 CONFIG = """sources = []
 [[panels]]
@@ -58,3 +59,20 @@ def test_list_and_doctor(config: Path, capsys: pytest.CaptureFixture[str]) -> No
     assert main(["--config", str(config), "doctor"]) == 0
     out = capsys.readouterr().out
     assert "ok    panel top" in out and "FAIL" not in out
+
+
+def test_list_and_devices_mark_a_tl_lcd_experimental(
+    config: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    found = [Found("SLV3SERIAL", "usb 1-2", True), Found("TLSERIAL", "usb 1-3", False, "TL Wireless LCD, experimental")]
+    monkeypatch.setattr(Slv3, "discover", classmethod(lambda cls: found))
+    assert main(["--config", str(config), "devices"]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        "slv3  SLV3SERIAL  usb 1-2  ok  not in the config",
+        "slv3  TLSERIAL  usb 1-3  no access (`doctor` says how to fix it)  not in the config"
+        "  (TL Wireless LCD, experimental)",
+    ]
+    assert main(["--config", str(config), "list"]) == 0
+    assert "devices: slv3 (SL V3 Wireless LCD 1cbe:0005; TL Wireless LCD 1cbe:0006, experimental), png\n" in (
+        capsys.readouterr().out
+    )

@@ -7,6 +7,10 @@ to 102,400 bytes and written in 16 KB pieces (usbfs.Bulk), as the daemon's libus
 panel acknowledges each command on the IN endpoint. This driver sends only what the daemon sends in normal use: its
 start-up queries, frames and brightness. Never the reboot, rotate, startup image or storage commands, and nothing
 that writes the panel's firmware.
+
+The UNI FAN TL Wireless LCD (USB 1cbe:0006) speaks the same protocol: lian-li-linux drives both with one driver
+(slv3_lcd.rs, "SLV3/TLV2 wireless LCD fan"), with the same 400 x 400 screen and frame size. This driver opens it
+too, as experimental, until one has been tested with pixdial.
 """
 
 from __future__ import annotations
@@ -24,9 +28,10 @@ from cryptography.hazmat.primitives.ciphers import Cipher, modes
 from PIL import Image
 
 from .base import Device, Found
-from .usbfs import Bulk, attached
+from .usbfs import Bulk, UsbDevice, attached
 
-VENDOR, PRODUCT = 0x1CBE, 0x0005
+VENDOR = 0x1CBE
+PRODUCTS = {0x0005: "", 0x0006: "TL Wireless LCD, experimental"}  # the panels it opens, and what `devices` notes
 KEY = b"slv3tuzx"  # DES key and IV of every 1cbe panel's headers
 PACKET = 102_400  # header and JPEG, zero-padded: one frame
 HEADER = 512
@@ -85,17 +90,23 @@ class Stamps:
         return self.last
 
 
+def panels() -> list[tuple[UsbDevice, str]]:
+    """The panels attached now, each with its note."""
+    return [(device, note) for product, note in PRODUCTS.items() for device in attached(VENDOR, product)]
+
+
 def connect(serial: str) -> Bulk:
-    for device in attached(VENDOR, PRODUCT):
+    for device, _ in panels():
         if device.serial == serial:
             return Bulk(device.node, EP_OUT, EP_IN)
-    raise FileNotFoundError(f"no SL V3 LCD with serial {serial}")
+    raise FileNotFoundError(f"no SL V3 or TL LCD with serial {serial}")
 
 
 class Slv3(Device):
-    """One SL V3 LCD by its USB serial. turn: degrees each frame is turned clockwise for the fan's mount (0, 90, 180
-    or 270); brightness: the backlight in percent."""
+    """One SL V3 (or TL) LCD by its USB serial. turn: degrees each frame is turned clockwise for the fan's mount (0,
+    90, 180 or 270); brightness: the backlight in percent."""
 
+    note = "SL V3 Wireless LCD 1cbe:0005; TL Wireless LCD 1cbe:0006, experimental"
     usb: Transport  # set by open(), with stamps
     stamps: Stamps
 
@@ -112,15 +123,15 @@ class Slv3(Device):
     @classmethod
     def discover(cls) -> list[Found]:
         return [
-            Found(d.serial, f"usb {d.port} ({d.node})", os.access(d.node, os.R_OK | os.W_OK))
-            for d in attached(VENDOR, PRODUCT)
+            Found(d.serial, f"usb {d.port} ({d.node})", os.access(d.node, os.R_OK | os.W_OK), note)
+            for d, note in panels()
         ]
 
     def problem(self) -> str | None:
         for found in self.discover():
             if found.id == self.serial:
                 return None if found.access else f"no read and write access to {found.where} ({UDEV_RULE} gives it)"
-        return f"no SL V3 LCD with serial {self.serial} attached"
+        return f"no SL V3 or TL LCD with serial {self.serial} attached"
 
     def open(self) -> str:
         """The daemon's start-up (Slv3LcdDevice::send_init): the revision query, the frame rate it always sets

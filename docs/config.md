@@ -66,13 +66,16 @@ getent group pixdial || sudo groupadd --system pixdial
 sudo usermod -aG pixdial "$USER"
 sudo tee /etc/udev/rules.d/60-pixdial.rules >/dev/null <<'RULE'
 SUBSYSTEM=="usb", ATTRS{idVendor}=="1cbe", ATTRS{idProduct}=="0005", GROUP="pixdial", MODE="0660"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1cbe", ATTRS{idProduct}=="0006", GROUP="pixdial", MODE="0660"
 RULE
 sudo udevadm control --reload-rules
 sudo udevadm trigger --subsystem-match=usb --action=add
 ```
 
 Log out and back in before starting pixdial so your session picks up the new group. The rule gives group members
-access to every panel with this USB ID. It does not grant access to RAPL counters or other sensor files.
+access to every panel with these USB IDs. It does not grant access to RAPL counters or other sensor files.
+The second line is for the UNI FAN TL Wireless LCD (`1cbe:0006`), which pixdial supports as experimental: it uses
+the SL V3 protocol, but no TL panel has been tested with pixdial yet.
 
 ## Sources
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ctypes
 import errno
+import functools
 import io
 from pathlib import Path
 
@@ -149,6 +150,61 @@ def test_only_the_commands_of_normal_use_are_sent(usb: Usb) -> None:
     stamps = [int.from_bytes(plain(data[: slv3.HEADER])[4:8], "little") for data in usb.sent]
     assert stamps == sorted(set(stamps))
     assert usb.closed
+
+
+def usb_device(sysfs: Path, port: str, product: str, serial: str, devnum: int) -> None:
+    d = sysfs / port
+    d.mkdir(parents=True)
+    for name, text in {"idVendor": "1cbe", "idProduct": product, "busnum": "1", "devnum": str(devnum)}.items():
+        (d / name).write_text(text + "\n")
+    (d / "serial").write_text(serial + "\n")
+
+
+@pytest.fixture
+def sysfs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """/sys/bus/usb/devices with an SL V3 LCD, a TL LCD and a HydroShift II LCD Circle (1cbe:a021, another
+    protocol), and a hub interface directory that has no ids."""
+    root = tmp_path / "usb"
+    usb_device(root, "1-2", "0005", "SLV3SERIAL", 4)
+    usb_device(root, "1-3", "0006", "TLSERIAL", 5)
+    usb_device(root, "1-4", "a021", "AIOSERIAL", 6)
+    (root / "1-0:1.0").mkdir()
+    monkeypatch.setattr(slv3, "attached", functools.partial(usbfs.attached, sysfs=root))
+    return root
+
+
+def test_a_tl_lcd_is_found_as_experimental_and_driven_like_an_sl_v3(
+    sysfs: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    found = slv3.Slv3.discover()
+    assert [(f.id, f.where, f.note) for f in found] == [
+        ("SLV3SERIAL", "usb 1-2 (/dev/bus/usb/001/004)", ""),
+        ("TLSERIAL", "usb 1-3 (/dev/bus/usb/001/005)", "TL Wireless LCD, experimental"),
+    ]
+    fake, opened = Usb(), []
+
+    def bulk(node: str, out_ep: int, in_ep: int) -> Usb:
+        opened.append((node, out_ep, in_ep))
+        return fake
+
+    monkeypatch.setattr(slv3, "Bulk", bulk)
+    panel = slv3.Slv3("TLSERIAL")
+    assert panel.problem() == f"no read and write access to usb 1-3 (/dev/bus/usb/001/005) ({slv3.UDEV_RULE} gives it)"
+    assert panel.open() == "firmware slv3_2024091003_01"
+    panel.show(Image.new("RGB", (400, 400)))
+    assert opened == [("/dev/bus/usb/001/005", slv3.EP_OUT, slv3.EP_IN)]
+    assert fake.commands() == [slv3.REVISION, slv3.FRAME_RATE, slv3.VERSION, slv3.BRIGHTNESS, slv3.FRAME]
+    assert slv3.Slv3("AIOSERIAL").problem() == "no SL V3 or TL LCD with serial AIOSERIAL attached"
+    with pytest.raises(FileNotFoundError, match="AIOSERIAL"):
+        slv3.Slv3("AIOSERIAL").open()
+
+
+def test_the_udev_rule_covers_every_product_the_driver_opens() -> None:
+    rules = [line for line in slv3.UDEV_RULE.read_text().splitlines() if line and not line.startswith("#")]
+    assert rules == [
+        f'SUBSYSTEM=="usb", ATTRS{{idVendor}}=="{slv3.VENDOR:04x}", ATTRS{{idProduct}}=="{product:04x}", TAG+="uaccess"'
+        for product in slv3.PRODUCTS
+    ]
 
 
 def test_options_are_checked() -> None:
