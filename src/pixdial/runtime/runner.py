@@ -63,7 +63,7 @@ class Runner:
         log.info("%s %s: panels %s; sources %s", NAME, __version__, panels, sources or "none")
         self.sampler.start()
         for screen in self.screens:
-            screen.sender.start()
+            screen.sender.thread.start()
         try:
             while not stop.is_set():
                 stop.wait(self.tick())

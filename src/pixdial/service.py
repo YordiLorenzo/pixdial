@@ -28,14 +28,16 @@ def unit(config: Path | None) -> str:
     if config is not None:
         command += ["--config", str(config.resolve())]
     text = (files(NAME) / "data" / UNIT).read_text()
-    start = f"ExecStart={' '.join(map(quoted, command))} run"
+    program, *arguments = command
+    start = f"ExecStart={' '.join([quoted(program, program=True), *map(quoted, arguments)])} run"
     return "".join(f"{start}\n" if line.startswith("ExecStart=") else line for line in text.splitlines(True))
 
 
-def quoted(word: str) -> str:
-    """One ExecStart word as systemd reads it: % and $ doubled, and in double quotes with \\ and " escaped where it
-    holds a space, a quote or a backslash, so a path such as "panel configs/config.toml" stays one argument."""
-    word = word.replace("%", "%%").replace("$", "$$")
+def quoted(word: str, program: bool = False) -> str:
+    """One ExecStart word as systemd reads it: % doubled, $ doubled in an argument (systemd expands variables there,
+    not in the program's path), and in double quotes with \\ and " escaped where it holds a space, a quote or a
+    backslash, so a path such as "panel configs/config.toml" stays one argument."""
+    word = word.replace("%", "%%") if program else word.replace("%", "%%").replace("$", "$$")
     if not any(c in word for c in " \t\"'\\"):
         return word
     return '"' + word.replace("\\", "\\\\").replace('"', '\\"') + '"'

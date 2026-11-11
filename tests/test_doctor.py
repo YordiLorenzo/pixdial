@@ -267,3 +267,18 @@ def test_the_snippet_in_a_share_has_no_serials(
 def test_share_runs_on_this_machine(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["doctor", "--share"]) == 0
     assert platform.release() in capsys.readouterr().out
+
+
+def test_share_hides_serials_of_a_broken_config_and_survives_an_unreadable_one(
+    home: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    attach(monkeypatch)
+    path = config(home, f'[panels]\nserial = "{A}"\n')  # a table, not an array of tables: the error quotes it
+    _, out = doctor_out(capsys, "--share")
+    assert A not in out and "panel-1" in out
+    path.chmod(0)
+    try:
+        _, out = doctor_out(capsys, "--share")
+    finally:
+        path.chmod(0o644)
+    assert "FAIL  config" in out

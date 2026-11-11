@@ -199,14 +199,16 @@ def share(path: Path | None) -> str:
         configured = [str(e.options.get("serial", "")) for e in cfg.load(path).panels]
     except cfg.ConfigError:  # its error can quote a panel's table, serial and all
         where = path or cfg.config_path()
-        text = where.read_text() if where.is_file() else ""
+        try:
+            text = where.read_text()
+        except OSError:  # missing or unreadable: its error, in the checks, quotes no table
+            text = ""
         configured = re.findall(r"""serial\s*=\s*["']([^"']+)["']""", text)
     given = {key for c in done for key in c.readings}
     raqm = "yes" if features.check_feature("raqm") else "no"
-    other = others()
     ids = [
         f"- {slv3.VENDOR:04x}:{product:04x} at usb {port}"
-        + (f": {pointer(product)}" if (product, port) in other else "")
+        + (f": {pointer(product)}" if (slv3.VENDOR, product) not in slv3.USB_IDS else "")
         for product, port in usbfs.products(slv3.VENDOR)
     ]
     panels = [f"- {found.id} at {found.where}: {firmware(found)}" for found in attached]

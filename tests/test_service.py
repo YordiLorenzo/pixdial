@@ -102,6 +102,7 @@ def test_a_path_with_a_space_or_a_percent_stays_one_argument() -> None:
     assert service.quoted("/home/u/.local/bin/pixdial") == "/home/u/.local/bin/pixdial"
     assert service.quoted("/home/u/panel configs/config.toml") == '"/home/u/panel configs/config.toml"'
     assert service.quoted("/home/u/100%/a$b") == "/home/u/100%%/a$$b"
+    assert service.quoted("/opt/pix$panel/bin/pixdial", program=True) == "/opt/pix$panel/bin/pixdial"
     assert service.quoted('/home/u/a "b"\\c') == '"/home/u/a \\"b\\"\\\\c"'
 
 

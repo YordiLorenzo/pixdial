@@ -52,9 +52,6 @@ class Sender:
             self.reopening = True
             self.changed.notify()
 
-    def start(self) -> None:
-        self.thread.start()
-
     def stop(self) -> None:
         """Ends the thread; the panel goes dark first."""
         with self.changed:
