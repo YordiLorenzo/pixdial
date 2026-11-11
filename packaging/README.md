@@ -1,7 +1,7 @@
 # Packaging
 
 Recipes for package repositories that keep their definitions outside this repo. Both target
-pixdial 0.1.1 and pin its published PyPI sdist. [Release updates](#release-updates) says how to
+pixdial 0.1.2 and pin its published PyPI sdist. [Release updates](#release-updates) says how to
 move them to a new release.
 Homebrew is intentionally omitted: pixdial drives physical panels only on Linux.
 
@@ -89,7 +89,7 @@ Check `systemctl --user cat pixdial.service` if it still points to a previous in
 
    ```sh
    git add PKGBUILD .SRCINFO
-   git commit -m "pixdial 0.1.1"
+   git commit -m "pixdial 0.1.2"
    git push
    ```
 
@@ -103,14 +103,14 @@ with `makepkg --printsrcinfo` on Arch before submitting.
 | ----- | ------------------ |
 | `pkgbase`, `pkgname` | Both use `pkgname`: `pixdial` (one package). |
 | `pkgdesc` | Literal `pkgdesc`: `A Python SDK and CLI for hardware screens on Linux`. |
-| `pkgver`, `pkgrel` | `0.1.1`, `1`. |
+| `pkgver`, `pkgrel` | `0.1.2`, `1`. |
 | `url` | `https://github.com/YordiLorenzo/pixdial`. |
 | `arch` | One row from `arch`: `any` (pure Python; Arch is Linux). |
 | `license` | Two rows from `license`: `GPL-3.0-or-later`, `OFL-1.1`. |
 | `checkdepends` | One row: `python-pytest`. |
 | `makedepends` | Four rows: `python-build`, `python-installer`, `python-hatchling`, `python-hatch-fancy-pypi-readme`. |
 | `depends` | Four rows: `python>=3.12`, `python-numpy`, `python-pillow`, `python-cryptography`. |
-| `source` | The PyPI URL of the 0.1.1 sdist, with `$pkgname` and `$pkgver` expanded to `pixdial` and `0.1.1`. |
+| `source` | The PyPI URL of the 0.1.2 sdist, with `$pkgname` and `$pkgver` expanded to `pixdial` and `0.1.2`. |
 | `sha256sums` | The SHA-256 of that sdist, as PyPI lists it. |
 
 The maintainer comment and `build()`, `check()` and `package()` functions are not `.SRCINFO`
@@ -153,7 +153,7 @@ fields. No split-package overrides or extra metadata fields are used.
 
    The build runs pytest through `pytestCheckHook` and checks that `pixdial` imports.
 4. Commit any new maintainer entry separately as `maintainers: add yordilorenzo`, then
-   the derivation as `pixdial: init at 0.1.1`. Push your branch and open a nixpkgs pull
+   the derivation as `pixdial: init at 0.1.2`. Push your branch and open a nixpkgs pull
    request with the build results. A PyPI upload token is not needed for this submission.
 
 ## Release updates

@@ -7,13 +7,13 @@
 
 python3Packages.buildPythonApplication (finalAttrs: {
   pname = "pixdial";
-  version = "0.1.1";
+  version = "0.1.2";
   pyproject = true;
   disabled = python3Packages.pythonOlder "3.12";
 
   src = fetchPypi {
     inherit (finalAttrs) pname version;
-    hash = "sha256-7OG5jgulSkH22dEKS3+YuUrT4CbhXDlbgoy3EBXW3+M=";
+    hash = "sha256-nnD9DCHwM1nR4Ej5ylilOxyb9ZvMaGwEURYlaO+cpxk=";
   };
 
   build-system = with python3Packages; [

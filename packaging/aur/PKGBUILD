@@ -1,6 +1,6 @@
 # Maintainer: YordiLorenzo <yordilorenzo@gmail.com>
 pkgname=pixdial
-pkgver=0.1.1
+pkgver=0.1.2
 pkgrel=1
 pkgdesc="Live hardware readings on Lian Li UNI FAN SL Wireless LCD (SL V3) fan screens"
 arch=('any')
@@ -9,8 +9,8 @@ license=('GPL-3.0-or-later' 'OFL-1.1')
 depends=('python>=3.12' 'python-numpy' 'python-pillow' 'python-cryptography')
 makedepends=('python-build' 'python-installer' 'python-hatchling' 'python-hatch-fancy-pypi-readme')
 checkdepends=('python-pytest')
-source=("https://files.pythonhosted.org/packages/23/73/f837434a81232ec37067fff062b96078ee20ae90174048b5fefa3cfc9267/$pkgname-$pkgver.tar.gz")
-sha256sums=('ece1b98e0ba54a41f6d9d10a4b7f98b94ad3e026e15c395b828cb71015d6dfe3')
+source=("https://files.pythonhosted.org/packages/93/2e/8c85068e9545a3b5bab98cf9373fa24d84ae4ec408e4ce3ef12c90ea9630/$pkgname-$pkgver.tar.gz")
+sha256sums=('9e70fd0c21f03359d1e048f9ca58a53b1c9bf59bcc686c0451162568ef9ca719')
 
 build() {
   cd "$pkgname-$pkgver"
