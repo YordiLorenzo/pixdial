@@ -19,6 +19,7 @@ from pixdial.readings import Reading, Value
 from pixdial.runtime import Catalog, Feed, Layout, Report, Runner, Sampler, Screen
 from pixdial.runtime.runner import FAST, SLOW
 from pixdial.sources import Source
+from tests import logged
 
 
 class Clock:
@@ -100,7 +101,7 @@ class Rig:
         self.clock = Live() if live else Clock()
         self.lines: list[str] = []
         self.readings: dict[str, Value] = {}
-        report = Report(self.lines.append)
+        report = Report(logged(self.lines))
         self.panels = panels or [Panel() for _ in designs]
         for panel in self.panels:
             panel.clock = self.clock

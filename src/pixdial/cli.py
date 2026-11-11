@@ -16,7 +16,7 @@ from .designs import THEMES, Design
 from .devices import BUILTIN as DEVICES
 from .devices import Device
 from .gallery import Demo, gallery
-from .runtime import ROTATE, Report
+from .runtime import ROTATE, Report, logs
 from .sources import BUILTIN as SOURCES
 from .sources import Source
 
@@ -39,6 +39,8 @@ def parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(required=True, metavar="COMMAND")
 
     run_ = sub.add_parser("run", help="show the designs on the panels until stopped")
+    run_.add_argument("--debug", action="store_true", help="also log each USB command, and tracebacks")
+    run_.add_argument("--log-file", type=Path, metavar="PATH", help="log to PATH, not to the standard output")
     run_.set_defaults(command=run)
 
     show_ = sub.add_parser("show", help="pick the designs a running `run` shows; alone, the current ones")
@@ -65,6 +67,11 @@ def parser() -> argparse.ArgumentParser:
 
 
 def run(args: argparse.Namespace) -> int:
+    try:
+        logs(args.debug, args.log_file)
+    except OSError as error:  # a log file it can't write
+        print(f"{NAME}: {error}", file=sys.stderr)
+        return USAGE
     runner = cfg.runner(cfg.load(args.config), Report())
     stop = threading.Event()
     for sig in (signal.SIGTERM, signal.SIGINT):

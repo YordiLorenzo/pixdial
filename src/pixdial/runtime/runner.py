@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 import math
 import threading
 import time
 from collections.abc import Sequence
 
+from .. import NAME, __version__
 from .feed import Feed
 from .layout import Catalog, Layout
 from .report import Report
@@ -16,6 +18,8 @@ from .screen import Screen
 FAST, SLOW = 1 / 30, 1 / 10  # s between ticks while something animates, and else (easing numbers, the next reading)
 STOP_WAIT = 5  # s the panels get to go dark when it stops: a hung one's USB calls time out within about 4
 BOOTTIME = getattr(time, "CLOCK_BOOTTIME", time.CLOCK_MONOTONIC)  # Linux's counts time asleep
+
+log = logging.getLogger(__name__)
 
 
 class Clock:
@@ -54,6 +58,9 @@ class Runner:
 
     def run(self, stop: threading.Event) -> None:
         """Until stop is set; the panels go dark at the end."""
+        panels = ", ".join(f"{s.name} ({type(s.sender.device).__name__})" for s in self.screens)
+        sources = ", ".join(name for name, _ in self.sampler.sources)
+        log.info("%s %s: panels %s; sources %s", NAME, __version__, panels, sources or "none")
         self.sampler.start()
         for screen in self.screens:
             screen.sender.start()

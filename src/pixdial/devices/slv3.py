@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import io
 import itertools
+import logging
 import os
 import time
 from collections.abc import Callable
@@ -35,6 +36,15 @@ REVISION, FRAME_RATE, VERSION, BRIGHTNESS, FRAME = 0x80, 0x0F, 0x0A, 0x0E, 0x65
 BRIGHTNESS_CURVE = ((0, 0), (25, 10), (50, 30), (75, 40), (100, 100))  # the firmware's: percent -> level
 UDEV_RULE = Path(__file__).parent.parent / "data" / "60-pixdial.rules"
 TURNS = {0: None, 90: Image.Transpose.ROTATE_270, 180: Image.Transpose.ROTATE_180, 270: Image.Transpose.ROTATE_90}
+COMMANDS = {  # by name, for the debug log
+    REVISION: "revision",
+    FRAME_RATE: "frame rate",
+    VERSION: "version",
+    BRIGHTNESS: "brightness",
+    FRAME: "frame",
+}
+
+log = logging.getLogger(__name__)
 
 
 class Transport(Protocol):
@@ -109,6 +119,7 @@ class Slv3(Device):
         self.turn, self.brightness = turn, brightness
         self.packet = bytearray(PACKET)
         self.pending = False  # a frame's acknowledgement not read yet
+        self.last = FRAME  # the last command written: what the next acknowledgement is for
 
     @classmethod
     def discover(cls) -> list[Found]:
@@ -129,12 +140,12 @@ class Slv3(Device):
         usb = self.usb = connect(self.serial)
         self.stamps, self.pending = Stamps(), False
         try:
-            usb.write(bytearray(header(REVISION, self.stamps.next(), winusb=True)))
-            usb.read(10)  # older panels don't answer
-            usb.write(bytearray(header(FRAME_RATE, self.stamps.next(), bytes([120]))))
-            usb.read()
-            usb.write(bytearray(header(VERSION, self.stamps.next())))
-            reply = usb.read()
+            self.write(REVISION, bytearray(header(REVISION, self.stamps.next(), winusb=True)))
+            self.ack(10)  # older panels don't answer
+            self.write(FRAME_RATE, bytearray(header(FRAME_RATE, self.stamps.next(), bytes([120]))))
+            self.ack()
+            self.write(VERSION, bytearray(header(VERSION, self.stamps.next())))
+            reply = self.ack()
             self.set_brightness(self.brightness)
         except OSError:
             usb.close()
@@ -150,7 +161,7 @@ class Slv3(Device):
         self.packet[:HEADER] = header(FRAME, self.stamps.next(), len(data).to_bytes(4, "big"))
         self.packet[HEADER : HEADER + len(data)] = data
         self.packet[HEADER + len(data) :] = bytes(PACKET - HEADER - len(data))
-        self.usb.write(self.packet)
+        self.write(FRAME, self.packet, f"{len(data)} bytes of JPEG")
         self.pending = True
 
     def off(self) -> None:
@@ -161,10 +172,26 @@ class Slv3(Device):
 
     def set_brightness(self, percent: int) -> None:
         self.settle()
-        self.usb.write(bytearray(header(BRIGHTNESS, self.stamps.next(), bytes([brightness_level(percent)]))))
-        self.usb.read()
+        self.write(BRIGHTNESS, bytearray(header(BRIGHTNESS, self.stamps.next(), bytes([brightness_level(percent)]))))
+        self.ack()
 
     def settle(self) -> None:
         if self.pending:
             self.pending = False
-            self.usb.read()
+            self.ack()
+
+    def write(self, command: int, data: bytearray, what: str = "") -> None:
+        """A command, logged when debugging with its length and the time the write took."""
+        start = time.monotonic()
+        self.usb.write(data)
+        self.last = command
+        ms = (time.monotonic() - start) * 1000
+        log.debug("%s: %d bytes%s, written in %.1f ms", COMMANDS[command], len(data), f" ({what})" if what else "", ms)
+
+    def ack(self, timeout_ms: int = 1000) -> bytes:
+        """The acknowledgement of the last command, logged when debugging with the time it took to come."""
+        start = time.monotonic()
+        reply = self.usb.read(timeout_ms)
+        ms = (time.monotonic() - start) * 1000
+        log.debug("%s %s after %.1f ms", COMMANDS[self.last], f"ack, {len(reply)} bytes," if reply else "no ack", ms)
+        return reply

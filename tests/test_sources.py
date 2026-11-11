@@ -13,6 +13,7 @@ import pytest
 from pixdial.readings import Reading
 from pixdial.runtime import Report, Sampler
 from pixdial.sources import Command, Cpu, Hwmon, Rapl, Source
+from tests import logged
 
 
 def chip(root: Path, n: int, name: str, files: dict[str, str]) -> None:
@@ -126,7 +127,7 @@ class Flaky(Source):
 def test_the_sampler_reports_a_failure_once_and_its_recovery() -> None:
     lines: list[str] = []
     flaky = Flaky()
-    sampler = Sampler([("flaky", flaky)], Report(lines.append), clock=lambda: 0.0)
+    sampler = Sampler([("flaky", flaky)], Report(logged(lines)), clock=lambda: 0.0)
     for _ in range(3):
         sampler.sample(0)
     assert lines == ["flaky: sensor gone", "flaky: working"]
@@ -150,7 +151,7 @@ class Constant(Source):
 
 def test_a_later_source_wins_a_key_two_report() -> None:
     sources: list[tuple[str, Source]] = [("first", Constant(1.0, 1.0)), ("second", Constant(2.0, 5.0))]
-    sampler = Sampler(sources, Report(lambda line: None), clock=lambda: 0.0)
+    sampler = Sampler(sources, Report(), clock=lambda: 0.0)
     sampler.sample(1)
     sampler.sample(0)  # the first source, read after the second
     assert sampler.fresh(0.0) == {"x": Reading(2.0)}
@@ -170,7 +171,7 @@ class Slow(Source):
 def test_a_slow_source_holds_up_no_other() -> None:
     release = threading.Event()
     sources: list[tuple[str, Source]] = [("slow", Slow(release)), ("fast", Constant(1.0, 0.01))]
-    sampler = Sampler(sources, Report(lambda line: None))
+    sampler = Sampler(sources, Report())
     sampler.start()
     try:
         deadline = time.monotonic() + 2
@@ -183,7 +184,7 @@ def test_a_slow_source_holds_up_no_other() -> None:
 
 
 def test_readings_from_before_a_sleep_are_dropped() -> None:
-    sampler = Sampler([("first", Constant(1.0, 1.0))], Report(lambda line: None), clock=lambda: 0.0)
+    sampler = Sampler([("first", Constant(1.0, 1.0))], Report(), clock=lambda: 0.0)
     sampler.sample(0)
     sampler.resumed()
     assert sampler.fresh(0.0) == {}
@@ -213,7 +214,7 @@ class Asleep(Source):
 
 def test_a_reading_begun_before_a_sleep_is_dropped_and_the_source_reset() -> None:
     source = Asleep()
-    sampler = Sampler([("asleep", source)], Report(lambda line: None))
+    sampler = Sampler([("asleep", source)], Report())
     sampler.start()
     try:
         assert source.reading.wait(2)

@@ -52,7 +52,7 @@ class Screen:
         try:
             design = make(spec)
         except Exception as error:  # a plugin design's bug: the panel keeps the design it shows
-            self.report(f"{self.name} design {spec}", repr(error))
+            self.report(f"{self.name} design {spec}", error)
             return
         self.spec, self.design, self.still = spec, design, None
         self.fade_from, self.fade_start = self.shown, None  # fades from the last frame, starting with the next
@@ -70,7 +70,7 @@ class Screen:
                 self.opened, self.still = sender.opens, None
             fresh = self.render(still_key, moving_key, now)
         except Exception as error:  # a design's bug, or a reading it can't draw: the other panels go on
-            self.report(f"{self.name} design {self.spec}", repr(error))
+            self.report(f"{self.name} design {self.spec}", error)
             return False
         self.report(f"{self.name} design {self.spec}")
         if fresh or now - self.sent_at >= RESEND:

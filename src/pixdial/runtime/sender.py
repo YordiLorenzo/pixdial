@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 import math
 import threading
 import time
@@ -12,6 +13,8 @@ from PIL import Image
 
 from ..devices import Device
 from .report import Report
+
+log = logging.getLogger(__name__)
 
 # s: the wait before the next try to open a panel that failed (unplugged, held by another program, or not back yet
 # after a resume), doubled for each failure in a row up to RETRY_MAX
@@ -107,11 +110,12 @@ class Sender:
         return True
 
     def failed(self, error: Exception) -> None:
-        self.report(f"{self.name} panel", error if isinstance(error, OSError) else repr(error))
+        self.report(f"{self.name} panel", error)
         worked = self.open and self.shown and self.clock() - self.opened_at >= RETRY_MAX
         self.close()
         self.wait = RETRY_FIRST if worked or not self.wait else min(2 * self.wait, RETRY_MAX)
         self.retry_at = self.clock() + self.wait
+        log.debug("next try in %.1f s", self.wait)
 
     def close(self) -> None:
         if self.open:

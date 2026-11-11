@@ -5,6 +5,13 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `pixdial run --debug` logs each USB command with its length and its acknowledgement time, and a traceback for each
+  error.
+- `pixdial run --log-file PATH` writes the log to a file, with the time on each line.
+- `run` logs its panels and sources as it starts. Errors are logged as warnings, the rest as info.
+
 ### Fixed
 
 - A frame too big for one SL V3 transfer is sent with 4:2:0 colour, instead of stopping the runtime.

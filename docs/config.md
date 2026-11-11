@@ -146,6 +146,20 @@ The PNG device replaces `preview.png` on each new frame. Open it while `run` is 
 and stops. The separate state directory keeps another layout selection from overriding this preview.
 This works on Linux and macOS.
 
+## Logs
+
+`run` logs to the standard output, which the journal keeps when `run` is a service. It logs the panels and sources
+as it starts, then a line when something breaks and one when it works again.
+
+```sh
+pixdial run --debug --log-file pixdial.log
+```
+
+`--debug` also logs each USB command with its length and the time it took, when each acknowledgement came, the wait
+before each new try to open a panel, and a traceback for each error. That is about 60 lines a second for each SL V3
+panel at 30 frames a second. `--log-file PATH` writes the log to PATH, with the time on each line, instead of the
+standard output. A log holds file paths: read it before you share it.
+
 ## Readings and ranges
 
 Sources return `Reading` objects keyed by name. Config metadata overrides source metadata; a design uses its
