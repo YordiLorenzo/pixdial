@@ -1,11 +1,17 @@
 # pixdial
 
-> A Python SDK and CLI for hardware screens on Linux. Free software under GPL-3.0-or-later.
+> Live hardware readings on Lian Li UNI FAN SL Wireless LCD (SL V3) fans on Linux, with a
+> Python SDK and CLI. Free software under GPL-3.0-or-later.
 
 pixdial draws live hardware readings on round LCD panels. It includes 14 designs,
 three themes (warm, ember and ice), and Python plugins for designs, sources and devices.
-The only supported physical panel is the Lian Li UNI FAN SL V3 Wireless LCD,
-USB 1cbe:0005, 400 × 400 pixels, on Linux. It does not control fan speed or RGB lighting.
+Supported panels, both round 400 × 400 pixels, on Linux:
+
+- Lian Li UNI FAN SL Wireless LCD (SL V3), USB 1cbe:0005: tested
+- Lian Li UNI FAN TL Wireless LCD (TL V2), USB 1cbe:0006: experimental, same protocol
+
+Each LCD needs its own USB cable to a USB 2 header. pixdial draws the screens only:
+it does not control fan speed or RGB lighting.
 
 Requires Python 3.12+ and uv (or pipx). Install from PyPI:
 

@@ -9,10 +9,12 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-GPL--3.0--or--later-FF9632" alt="GPL-3.0-or-later"></a>
 </p>
 
-**pixdial puts live hardware readings on the LCDs in your PC, with a Python SDK to build your own designs.**
+**pixdial puts live hardware readings on Lian Li UNI FAN SL Wireless LCD (SL V3) fans on Linux. Build your own
+designs in Python.**
 
-Pick from 14 designs for CPU load, temperatures, power, a clock and more. Match them to your build with three
-themes, or write a design of your own. pixdial draws each frame on the host and sends it over USB.
+Pick from 14 designs for CPU load, temperatures, power, a clock and more, and match them to your build with three
+themes. pixdial draws each frame on the host and sends it over USB. It draws the screens only: fan speed and RGB
+stay with lian-li-linux, or whatever controls them now.
 
 [Website](https://yordilorenzo.github.io/pixdial/) · [Quick start](#quick-start) · [Supported hardware](#supported-hardware) · [Build a design](#build-a-design)
 
@@ -117,9 +119,9 @@ In another terminal, `pixdial show crown:ember` changes the configured panel's d
 
 - **Limits from the hardware.** Gauges use reported sensor limits, GPU power limits and slowdown temperatures
   when available. [Config overrides and fallback ranges](docs/config.md#readings-and-ranges) cover the rest.
-- **Local sensors and your own data.** CPU load and power, NVIDIA GPU readings and Linux hardware sensors are built in.
-  Add PSU readings, connector currents or agent quota through configured sensors, a command that prints JSON,
-  or a Python source.
+- **Local sensors and your own data.** CPU load and power, NVIDIA GPU readings, AMD GPU readings (experimental)
+  and Linux hardware sensors are built in. Add PSU readings, connector currents or agent quota through configured
+  sensors, a command that prints JSON, or a Python source.
 
 ### Make it yours
 
@@ -130,12 +132,17 @@ In another terminal, `pixdial show crown:ember` changes the configured panel's d
 
 ## Supported hardware
 
-| Panel | USB ID | Display | OS |
+| Panel | USB ID | Display | Status |
 | --- | --- | --- | --- |
-| Lian Li UNI FAN SL V3 Wireless LCD | `1cbe:0005` | Round, 400 × 400 | Linux |
+| Lian Li UNI FAN SL Wireless LCD (SL V3) | `1cbe:0005` | Round, 400 × 400 | Tested |
+| Lian Li UNI FAN TL Wireless LCD (TL V2) | `1cbe:0006` | Round, 400 × 400 | Experimental |
 
-This is the only supported physical device today. Other Lian Li LCDs and AIO screens need their own tested
-[device plugins](docs/plugins.md#devices). Despite the fan's name, its LCD receives frames over USB.
+Both run on Linux. Each LCD needs its own USB cable to a USB 2 header: despite the fan's name, its LCD receives
+frames over USB, not over the wireless dongle. `lsusb | grep 1cbe` lists the panels attached.
+
+The TL Wireless LCD speaks the same protocol as the SL V3, but no TL panel has been tested with pixdial yet. If you
+have one, a [device test report](https://github.com/YordiLorenzo/pixdial/issues/new?template=device-test.yml)
+helps. Other Lian Li LCDs and AIO screens need their own tested [device plugins](docs/plugins.md#devices).
 pixdial does not control fan speed or RGB lighting.
 
 ## CLI
@@ -274,8 +281,9 @@ physical panel support is Linux-only.
 
 ### Why are some values missing?
 
-The default sources read CPU load, RAPL package power, NVIDIA GPU readings and CPU temperature via hwmon.
-Availability depends on your hardware, drivers and file permissions. PSU readings, connector currents and agent
+The default sources read CPU load, RAPL package power, AMD GPU readings (experimental), NVIDIA GPU readings and
+CPU temperature via hwmon. Availability depends on your hardware, drivers and file permissions. The default
+rotation leaves out designs whose readings no source gives. PSU readings, connector currents and agent
 quota need [additional sources](docs/config.md#sources). `pixdial doctor` shows what each source can read.
 
 ### Can I run it alongside lian-li-linux?

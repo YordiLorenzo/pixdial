@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>pixdial | Hardware dashboards for Linux, built in Python</title>
-  <meta name="description" content="Put live hardware readings on your PC's LCD panels. Explore 14 designs, three themes and a Python SDK. Install pixdial from PyPI or preview without hardware.">
+  <title>pixdial | Lian Li UNI FAN SL Wireless LCD (SL V3) dashboards on Linux</title>
+  <meta name="description" content="Live hardware readings on Lian Li UNI FAN SL Wireless LCD (SL V3) fans on Linux: 14 designs, three themes and a Python SDK. Install from PyPI.">
   <meta name="theme-color" content="#070402">
   <link rel="canonical" href="https://yordilorenzo.github.io/pixdial/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="pixdial">
   <meta property="og:title" content="pixdial | Beautiful hardware dashboards. Yours to build.">
-  <meta property="og:description" content="A Python SDK and CLI for hardware screens on Linux. 14 designs, three themes and plugins for your own readings and displays.">
+  <meta property="og:description" content="Live hardware readings on Lian Li UNI FAN SL Wireless LCD (SL V3) fans on Linux. 14 designs, three themes and Python plugins for your own readings.">
   <meta property="og:url" content="https://yordilorenzo.github.io/pixdial/">
   <meta property="og:image" content="https://yordilorenzo.github.io/pixdial/images/social-preview.png">
   <meta property="og:image:width" content="1280">
@@ -18,7 +18,7 @@
   <meta property="og:image:alt" content="pixdial's amber mark and round CPU, GPU and PSU dashboards with demo readings">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="pixdial | Beautiful hardware dashboards. Yours to build.">
-  <meta name="twitter:description" content="A Python SDK and CLI for hardware screens on Linux. Explore 14 real designs and three themes.">
+  <meta name="twitter:description" content="Live hardware readings on Lian Li UNI FAN SL Wireless LCD (SL V3) fans on Linux. 14 designs and three themes.">
   <meta name="twitter:image" content="https://yordilorenzo.github.io/pixdial/images/social-preview.png">
   <meta name="twitter:image:alt" content="pixdial's amber mark and round CPU, GPU and PSU dashboards with demo readings">
   <link rel="icon" href="favicon.ico" sizes="any">
@@ -34,10 +34,10 @@
       "@type": "SoftwareApplication",
       "name": "pixdial",
       "url": "https://yordilorenzo.github.io/pixdial/",
-      "description": "A Python SDK and CLI for hardware screens on Linux, with 14 built-in designs, three themes and plugins for designs, sources and devices.",
+      "description": "Live hardware readings on Lian Li UNI FAN SL Wireless LCD (SL V3) fans on Linux, with 14 built-in designs, three themes and Python plugins for designs, sources and devices.",
       "applicationCategory": "UtilitiesApplication",
       "operatingSystem": "Linux",
-      "softwareRequirements": "Python 3.12 or newer; uv or pipx. Physical panel support: Lian Li UNI FAN SL V3 Wireless LCD, USB 1cbe:0005.",
+      "softwareRequirements": "Python 3.12 or newer; uv or pipx. Panels: Lian Li UNI FAN SL Wireless LCD (SL V3), USB 1cbe:0005; Lian Li UNI FAN TL Wireless LCD (TL V2), USB 1cbe:0006, experimental.",
       "downloadUrl": "https://pypi.org/project/pixdial/",
       "license": "https://www.gnu.org/licenses/gpl-3.0.html",
       "isAccessibleForFree": true,
@@ -66,7 +66,7 @@
         <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> OPEN SOURCE. ON YOUR MACHINE.</p>
         <h1 id="hero-title">Beautiful hardware dashboards.<br><span>Yours to build.</span></h1>
         <p class="hero-category">A Python SDK and CLI for hardware screens on Linux.</p>
-        <p class="hero-description">Put live readings on the LCDs in your PC. Pick a design, match your build, or write your own.</p>
+        <p class="hero-description">Put live hardware readings on Lian Li UNI FAN SL Wireless LCD (SL V3) fans. Pick a design, match your build, or write your own in Python.</p>
         <div class="install-command">
           <span class="prompt" aria-hidden="true">$</span>
           <code id="install-command">uv tool install pixdial</code>
@@ -77,7 +77,7 @@
           <a class="button button-primary" href="#setup">Set up your panel <span aria-hidden="true">↓</span></a>
           <a class="text-link" href="https://github.com/YordiLorenzo/pixdial">View on GitHub <span aria-hidden="true">↗</span></a>
         </div>
-        <a class="compatibility-link" href="#hardware">For Lian Li UNI FAN SL V3 Wireless LCD <span aria-hidden="true">↓</span></a>
+        <a class="compatibility-link" href="#hardware">Supported fans and USB IDs <span aria-hidden="true">↓</span></a>
       </div>
       <div class="hero-visual">
         <div class="orbit orbit-one" aria-hidden="true"></div>
@@ -146,7 +146,7 @@
       <ol class="setup-grid">
         <li><span class="step-number" aria-hidden="true">01</span><h3>Install.</h3><p>Install pixdial from PyPI with uv. <code>pipx install pixdial</code> works too.</p><pre><code>uv tool install pixdial</code></pre></li>
         <li><span class="step-number" aria-hidden="true">02</span><h3>Set up your panels.</h3><p>Setup finds your panels, gives your user access through sudo (one password prompt), writes the config and runs the checks. The README has the <a href="https://github.com/YordiLorenzo/pixdial#quick-start">manual steps</a>.</p><pre><code>pixdial setup</code></pre></li>
-        <li><span class="step-number" aria-hidden="true">03</span><h3>Start at login.</h3><p>Your panels show their designs now and after every login. To try pixdial in a terminal, use <code>pixdial run</code>; Ctrl-C turns the panels dark.</p><div><pre><code>pixdial service install</code></pre><a class="text-link" href="https://github.com/YordiLorenzo/pixdial/blob/main/docs/config.md">Configuration guide <span aria-hidden="true">↗</span></a></div></li>
+        <li><span class="step-number" aria-hidden="true">03</span><h3>Start at login.</h3><p>Your panels show their designs now and after every login. To try pixdial in a terminal first, use <code>pixdial run</code>.</p><div><pre><code>pixdial service install</code></pre><a class="text-link" href="https://github.com/YordiLorenzo/pixdial/blob/main/docs/config.md">Configuration guide <span aria-hidden="true">↗</span></a></div></li>
       </ol>
       <div class="preview-callout"><div><h3>No panel yet?</h3><p>Render a preview from demo readings. No hardware needed.</p></div><pre><code>pixdial render crown --state busy --out preview</code></pre></div>
     </section>
@@ -183,16 +183,16 @@ design.render(now=0).save(<span class="syntax-string">"demo.png"</span>)</code><
     </section>
 
     <section class="section wrap" id="hardware" aria-labelledby="hardware-title">
-      <div class="section-heading"><div><p class="eyebrow">SUPPORTED HARDWARE</p><h2 id="hardware-title">One panel. Built for it.</h2></div><p>The Lian Li UNI FAN SL V3 Wireless LCD is the only supported physical device today.</p></div>
-      <div class="hardware-table"><table><thead><tr><th scope="col">Panel</th><th scope="col">USB ID</th><th scope="col">Display</th><th scope="col">OS</th></tr></thead><tbody><tr><th scope="row">Lian Li UNI FAN SL V3 Wireless LCD</th><td data-label="USB ID"><code>1cbe:0005</code></td><td data-label="Display">Round, 400 × 400</td><td data-label="OS">Linux</td></tr></tbody></table></div>
-      <p class="hardware-note">The LCD receives frames over USB. Other panels and AIO screens need tested <a href="https://github.com/YordiLorenzo/pixdial/blob/main/docs/plugins.md#devices">device plugins</a>. pixdial does not control fan speed or RGB lighting.</p>
+      <div class="section-heading"><div><p class="eyebrow">SUPPORTED HARDWARE</p><h2 id="hardware-title">One round screen. Built for it.</h2></div><p>The Lian Li UNI FAN SL Wireless LCD (SL V3) is tested. The TL Wireless LCD (TL V2) uses the same protocol and is experimental.</p></div>
+      <div class="hardware-table"><table><thead><tr><th scope="col">Panel</th><th scope="col">USB ID</th><th scope="col">Display</th><th scope="col">Status</th></tr></thead><tbody><tr><th scope="row">Lian Li UNI FAN SL Wireless LCD (SL V3)</th><td data-label="USB ID"><code>1cbe:0005</code></td><td data-label="Display">Round, 400 × 400</td><td data-label="Status">Tested</td></tr><tr><th scope="row">Lian Li UNI FAN TL Wireless LCD (TL V2)</th><td data-label="USB ID"><code>1cbe:0006</code></td><td data-label="Display">Round, 400 × 400</td><td data-label="Status">Experimental</td></tr></tbody></table></div>
+      <p class="hardware-note">Both run on Linux. Each LCD needs its own USB cable to a USB 2 header; <code>lsusb | grep 1cbe</code> lists the panels attached. Other panels and AIO screens need tested <a href="https://github.com/YordiLorenzo/pixdial/blob/main/docs/plugins.md#devices">device plugins</a>. pixdial does not control fan speed or RGB lighting.</p>
       <div class="boundaries"><h3>What pixdial touches.</h3><div><p>The driver sends queries, frame-rate setup, JPEG frames and brightness over USB. No firmware writes, reboots or storage commands.</p><p>Built-in readers use local files or NVML. No telemetry or network service. Configured commands and plugins run with your permissions and can use the network.</p><a class="text-link" href="https://github.com/YordiLorenzo/pixdial/blob/main/SECURITY.md">Security and boundaries <span aria-hidden="true">↗</span></a></div></div>
     </section>
 
     <section class="section faq-section" id="faq" aria-labelledby="faq-title">
       <div class="wrap faq-layout"><div><p class="eyebrow">A FEW DETAILS</p><h2 id="faq-title">Before you plug in.</h2></div><div class="faq-list">
         <details><summary>Can I try pixdial without a panel?</summary><p>Yes. <code>pixdial render crown --out preview</code> writes a PNG from demo readings. Rendering works on Linux and macOS. For a live preview, use the <a href="https://github.com/YordiLorenzo/pixdial/blob/main/docs/config.md#try-a-live-layout-without-hardware">PNG device</a>. Physical panels are supported on Linux only.</p></details>
-        <details><summary>Which readings are built in?</summary><p>CPU load, RAPL package power, NVIDIA GPU readings and CPU temperature via Linux hardware sensors. Availability depends on your hardware, drivers and permissions. PSU readings, connector currents and agent quota need configured sources.</p><p>Run <code>pixdial doctor</code> to check each source. Missing or stale measurements show a dash.</p></details>
+        <details><summary>Which readings are built in?</summary><p>CPU load, RAPL package power, AMD GPU readings (experimental), NVIDIA GPU readings and CPU temperature via Linux hardware sensors. Availability depends on your hardware, drivers and permissions. PSU readings, connector currents and agent quota need configured sources.</p><p>Run <code>pixdial doctor</code> to check each source. Missing or stale measurements show a dash.</p></details>
         <details><summary>Does pixdial need root?</summary><p>No. pixdial runs as your user. <code>pixdial setup</code> installs the <a href="https://github.com/YordiLorenzo/pixdial/blob/main/docs/config.md#usb-permissions">udev rule</a> that gives you access to the panels through sudo, after it prints the commands. On a machine nobody logs in to, it installs a group rule instead. RAPL counters can need separate read permission.</p></details>
         <details><summary>How does this relate to lian-li-linux?</summary><p><a href="https://github.com/sgtaziz/lian-li-linux">sgtaziz/lian-li-linux</a> is a Linux replacement for L-Connect 3, under the MIT licence. It controls fan speed, pumps and RGB lighting on many Lian Li devices, and drives their LCDs with images, GIFs, video, sensor presets, templates and a template editor. pixdial follows its SL V3 protocol implementation and draws the LCDs only, with its own designs and Python plugins.</p><p>You can use both: lian-li-linux keeps fan speed and RGB, and pixdial draws the LCDs. Each LCD takes one program at a time, so take the LCDs pixdial drives out of lian-li-linux's LCD list (<code>lcds</code> in its <code>config.json</code>) and restart its daemon. The <a href="https://github.com/YordiLorenzo/pixdial#can-i-run-it-alongside-lian-li-linux">README</a> has the commands.</p></details>
         <details><summary>Can I add a design, reading or display?</summary><p>Yes. Python entry points register designs, sources and devices. The <a href="https://github.com/YordiLorenzo/pixdial/tree/main/examples/plugin">example plugin</a> includes all three. New physical displays need a device plugin and hardware testing; other resolutions also need rendering support.</p></details>
