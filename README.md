@@ -143,13 +143,13 @@ pixdial does not control fan speed or RGB lighting.
 | Command | Use |
 | --- | --- |
 | `pixdial setup` | Find the panels, give your user access, write the config and run the checks; `--dry-run` changes nothing. |
-| `pixdial service install` | Run `run` now and at every login as a systemd user service; `service status` and `service remove` too. |
-| `pixdial run` | Run the configured panels until Ctrl-C or SIGTERM. |
+| `pixdial service install` | Start `run` now and at every login, as a systemd user service; `service status` and `service remove` too. |
+| `pixdial run` | Run the configured panels until Ctrl-C or SIGTERM; `--debug --log-file PATH` writes a detailed log. |
 | `pixdial show crown:ember` | Set one design per configured panel; `show` alone prints the selection, `show rotate` cycles designs. |
 | `pixdial list` | List designs, themes, sources and devices, including installed plugins. |
 | `pixdial devices` | Find attached panels and check access. |
 | `pixdial render crown --out preview` | Render a PNG from demo readings; `render --gallery preview` builds the full gallery. |
-| `pixdial doctor` | Check config, fonts, plugins, panel permissions, layout and source readings. |
+| `pixdial doctor` | Check config, fonts, plugins, panel permissions, layout and source readings; `--share` prints them for an issue. |
 
 Put `--config PATH` before the command to use another TOML file. Render states are `idle`, `busy`, `waiting`,
 `full` and `missing`; `--scale 2` produces an 800 × 800 image. Exit codes are 0 for success, 1 for a failed check
@@ -220,6 +220,48 @@ Rendering uses [Pillow](https://python-pillow.org/) and [NumPy](https://numpy.or
 
 pixdial is not affiliated with Lian Li or the hardware manufacturers named here.
 
+## Troubleshooting and undo
+
+`pixdial doctor` checks the config, the panels and each source, with a hint under each problem.
+
+- **No access to a panel.** `doctor` says ``no read and write access to ...: `pixdial setup` gives it``. Run
+  `pixdial setup`.
+- **Another program holds a panel.** `doctor` says `claimed by <program> (pid <n>), so pixdial can't open it`.
+  If that is lian-li-linux, take the LCD out of its LCD list, as in
+  [the FAQ](#can-i-run-it-alongside-lian-li-linux).
+- **A panel stays black, or `pixdial devices` finds none.** Each LCD needs its own USB cable to a USB 2 header
+  on the motherboard: the wireless dongle does not carry frames. `lsusb | grep 1cbe` lists the panels attached.
+- **GPU readings are missing.** NVIDIA readings need the NVIDIA driver. AMD readings come from the experimental
+  `amdgpu` source: if `doctor` shows nothing for `source amdgpu` on a Radeon card, please send a
+  [Radeon report](https://github.com/YordiLorenzo/pixdial/issues/new?template=radeon.yml). The default rotation
+  leaves out designs whose readings no source gives, and `doctor` lists them.
+
+**To report a problem,** open a [bug report](https://github.com/YordiLorenzo/pixdial/issues/new?template=bug.yml)
+with the output of `pixdial doctor --share`. It takes out the panel serials, the hostname and your home folder.
+For a log, stop the service first (only one program can hold a panel), run pixdial until the problem shows, then
+press Ctrl-C and start the service again:
+
+```sh
+systemctl --user stop pixdial
+pixdial run --debug --log-file pixdial.log
+systemctl --user start pixdial
+```
+
+The log holds file paths, so read it before you share it.
+
+**To undo the setup,** remove the service, the udev rule and pixdial's config and state folders:
+
+```sh
+pixdial service remove
+sudo rm /etc/udev/rules.d/60-pixdial.rules
+sudo udevadm control --reload-rules
+rm -rf ~/.config/pixdial ~/.local/state/pixdial
+uv tool uninstall pixdial
+```
+
+If setup added your user to the `pixdial` group, `sudo gpasswd -d "$USER" pixdial` takes it out. If you took
+LCDs out of lian-li-linux's config, put them back and restart its daemon.
+
 ## FAQ
 
 ### Can I try it without a panel?
@@ -236,8 +278,17 @@ quota need [additional sources](docs/config.md#sources). `pixdial doctor` shows 
 
 ### Can I run it alongside lian-li-linux?
 
-Use only one program per panel. Remove the panels pixdial drives from the other daemon's configuration;
-otherwise the programs compete for the USB interface.
+Yes. lian-li-linux keeps fan speed and RGB, and pixdial draws the LCDs. Each LCD takes one program at a time, so
+take the LCDs pixdial drives out of lian-li-linux's LCD list: delete their entries under `lcds` in its
+`config.json` (in `~/.config/lianli/` for its user service, `/var/lib/lianli/` for its system service). Then
+restart its daemon:
+
+```sh
+systemctl --user restart lianli-daemon       # the user service
+sudo systemctl restart lianli-daemon-system  # the system service
+```
+
+While another program still holds a panel, `pixdial doctor` names it.
 
 ### Does it need root?
 
