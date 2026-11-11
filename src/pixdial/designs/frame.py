@@ -98,7 +98,8 @@ class Frame:
     def disc(self, x: float, y: float, r: float, colour: Sequence[float], glow: float = 1.0) -> None:
         if glow:
             disc(self.light, self.kit, x, y, r, np.array(colour, np.float32) * glow)  # type: ignore[arg-type]
-        self.shapes.append(lambda px: disc(px, self.kit, x, y, r, colour))
+        kit = self.kit  # not self: a shape that held the frame would keep its arrays until a cycle collection
+        self.shapes.append(lambda px: disc(px, kit, x, y, r, colour))
 
     def draw(self, rgb: Sequence[float]) -> ImageDraw.ImageDraw:
         r, g, b = (int(c) for c in rgb)

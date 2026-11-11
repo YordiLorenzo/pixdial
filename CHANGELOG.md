@@ -5,6 +5,11 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A frame with dots (the grid design's threads) is freed as soon as it is drawn. Before, each one waited for Python's
+  cycle collector, so `run` could hold 600 MB to over 1 GB; on the developer's rig it now stays near 190 MB.
+
 ## [0.1.1] - 2026-11-11
 
 ### Added
