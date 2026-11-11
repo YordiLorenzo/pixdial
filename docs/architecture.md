@@ -31,7 +31,8 @@ Normal shutdown calls each open device's `off()` and `close()`.
 ## SL V3 transport
 
 The driver follows the SL V3 protocol in
-[sgtaziz/lian-li-linux](https://github.com/sgtaziz/lian-li-linux), daemon v1.2.4 (`slv3_lcd.rs`, `crypto.rs`).
+[sgtaziz/lian-li-linux](https://github.com/sgtaziz/lian-li-linux), daemon v1.2.6 (`slv3_lcd.rs`, `crypto.rs`),
+Copyright (c) 2026 sgtaziz, MIT.
 Linux usbdevfs provides bulk transfers directly through the device node; libusb is not required.
 
 Commands have a 512-byte DES-CBC header. The fixed protocol key is device compatibility data, not a user secret

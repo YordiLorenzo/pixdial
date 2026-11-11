@@ -1,7 +1,7 @@
 [project]
 name = "pixdial"
 version = "0.1.0"
-description = "A Python SDK and CLI for hardware screens on Linux"
+description = "Live hardware readings on Lian Li UNI FAN SL Wireless LCD (SL V3) fan screens"
 dynamic = ["readme"]
 requires-python = ">=3.12"
 license = "GPL-3.0-or-later"

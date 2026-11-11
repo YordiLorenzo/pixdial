@@ -286,6 +286,7 @@ details p { max-width: 68ch; font-size: 14px; color: var(--muted); margin-bottom
   .hardware-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .hardware-table tr, .hardware-table tbody th { display: block; }
   .hardware-table tbody th { padding: 0 0 16px; border-bottom-color: #724627; font-size: 14px; }
+  .hardware-table tbody tr + tr th { padding-top: 32px; }
   .hardware-table td { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 14px 0; font-size: 13px; }
   .hardware-table td::before { content: attr(data-label); content: attr(data-label) / ""; color: var(--muted); font: 11px var(--display); }
   .hardware-note { font-size: 12px; }
