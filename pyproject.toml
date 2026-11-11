@@ -74,6 +74,8 @@ warn_return_any = false  # numpy's stubs type many array operations as Any
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["hardware: runs on the real panels attached to this machine (tests/test_hardware.py)"]
+addopts = "-m 'not hardware'"  # `pytest -m hardware` runs them
 
 # PyPI renders the README without the repo around it: point its relative images and links at GitHub.
 [tool.hatch.metadata.hooks.fancy-pypi-readme]
