@@ -5,6 +5,11 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+- `doctor --share`: a Markdown report for issues (versions, distro, kernel, USB ids, panel firmware, sources, hwmon chips, the readings each design misses), with serials, the hostname and the home folder taken out.
+- `doctor` shows a default source that is missing as "skip" with a hint, and exits 0; with no panels in the config it lists the attached ones and prints a config for them.
+- `doctor` and `devices` name the program that holds a panel, and point to lian-li-linux when another program has claimed it.
+- `doctor` prints the installed version and the command that upgrades it.
+- `devices` names the USB cable when it finds no panel, and points other Lian Li ids to lian-li-linux and Turing or TURZX ids to turing-smart-screen-python.
 - The default layout and rotation leave out designs whose readings no source gives (psu without a PSU source, gpu without NVIDIA); `doctor` lists them.
 - `pixdial service install`, `remove` and `status`: the bundled user unit with ExecStart pointed at the running pixdial.
 - A config error (exit status 2) stops the service once instead of restarting it every 10 seconds.

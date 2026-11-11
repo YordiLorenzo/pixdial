@@ -16,24 +16,25 @@ import itertools
 import os
 import time
 from collections.abc import Callable
-from pathlib import Path
 from typing import Protocol
 
 from cryptography.hazmat.decrepit.ciphers.algorithms import TripleDES
 from cryptography.hazmat.primitives.ciphers import Cipher, modes
 from PIL import Image
 
+from .. import NAME
 from .base import Device, Found
-from .usbfs import Bulk, attached
+from .usbfs import Bulk, UsbDevice, attached, holder
 
-VENDOR, PRODUCT = 0x1CBE, 0x0005
+VENDOR = 0x1CBE  # Lian Li's, which Turing and TURZX screens use too
+USB_IDS = ((VENDOR, 0x0005),)  # the panels this driver drives; `pixdial setup` writes the udev rule for each
 KEY = b"slv3tuzx"  # DES key and IV of every 1cbe panel's headers
 PACKET = 102_400  # header and JPEG, zero-padded: one frame
 HEADER = 512
 EP_OUT, EP_IN = 0x01, 0x81
 REVISION, FRAME_RATE, VERSION, BRIGHTNESS, FRAME = 0x80, 0x0F, 0x0A, 0x0E, 0x65
 BRIGHTNESS_CURVE = ((0, 0), (25, 10), (50, 30), (75, 40), (100, 100))  # the firmware's: percent -> level
-UDEV_RULE = Path(__file__).parent.parent / "data" / "60-pixdial.rules"
+CABLE = "Each LCD needs its own USB cable to a USB 2 header; `lsusb | grep 1cbe` lists the devices attached"
 TURNS = {0: None, 90: Image.Transpose.ROTATE_270, 180: Image.Transpose.ROTATE_180, 270: Image.Transpose.ROTATE_90}
 
 
@@ -85,8 +86,12 @@ class Stamps:
         return self.last
 
 
+def panels() -> list[UsbDevice]:
+    return [device for vendor, product in USB_IDS for device in attached(vendor, product)]
+
+
 def connect(serial: str) -> Bulk:
-    for device in attached(VENDOR, PRODUCT):
+    for device in panels():
         if device.serial == serial:
             return Bulk(device.node, EP_OUT, EP_IN)
     raise FileNotFoundError(f"no SL V3 LCD with serial {serial}")
@@ -112,15 +117,23 @@ class Slv3(Device):
     @classmethod
     def discover(cls) -> list[Found]:
         return [
-            Found(d.serial, f"usb {d.port} ({d.node})", os.access(d.node, os.R_OK | os.W_OK))
-            for d in attached(VENDOR, PRODUCT)
+            Found(d.serial, f"usb {d.port} ({d.node})", os.access(d.node, os.R_OK | os.W_OK), holder(d))
+            for d in panels()
         ]
 
     def problem(self) -> str | None:
         for found in self.discover():
-            if found.id == self.serial:
-                return None if found.access else f"no read and write access to {found.where} ({UDEV_RULE} gives it)"
-        return f"no SL V3 LCD with serial {self.serial} attached"
+            if found.id != self.serial:
+                continue
+            if not found.access:
+                return f"no read and write access to {found.where}: `{NAME} setup` gives it"
+            if found.held and not found.held.startswith(f"{NAME} "):  # `run` showing on it is no problem
+                return (
+                    f"claimed by {found.held}, so pixdial can't open it. If that is lian-li-linux's daemon, take "
+                    "this LCD out of its LCD list and restart it"
+                )
+            return None
+        return f"no SL V3 LCD with serial {self.serial} attached. {CABLE}"
 
     def open(self) -> str:
         """The daemon's start-up (Slv3LcdDevice::send_init): the revision query, the frame rate it always sets

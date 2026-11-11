@@ -15,7 +15,7 @@ from . import config as cfg
 from .designs import BUILTIN as DESIGNS
 from .designs import THEMES, Design
 from .devices import BUILTIN as DEVICES
-from .devices import Device
+from .devices import Device, slv3
 from .gallery import Demo, gallery
 from .runtime import ROTATE, Report
 from .sources import BUILTIN as SOURCES
@@ -61,6 +61,7 @@ def parser() -> argparse.ArgumentParser:
     render_.set_defaults(command=render)
 
     doctor_ = sub.add_parser("doctor", help="check the config, panels, permissions and sources")
+    doctor_.add_argument("--share", action="store_true", help="the same as Markdown for an issue, without serials")
     doctor_.set_defaults(command=check)
     service_parser(sub)
     return p
@@ -110,11 +111,14 @@ def devices(args: argparse.Namespace) -> int:
     for kind, cls in plugins.available("devices", Device, DEVICES)[0].items():
         for panel in cls.discover():
             found += 1
-            access = "ok" if panel.access else "no access (`doctor` says how to fix it)"
+            access = "ok" if panel.access else f"no access (`{NAME} setup` gives it)"
+            access = f"in use by {panel.held}" if panel.held and panel.access else access
             where = f"panel {panels[panel.id]!r}" if panel.id in panels else "not in the config"
             print(f"{kind}  {panel.id}  {panel.where}  {access}  {where}")
+    for product, port in doctor.others():
+        print(f"{slv3.VENDOR:04x}:{product:04x}  usb {port}  {doctor.pointer(product)}")
     if not found:
-        print("no panels attached", file=sys.stderr)
+        print(f"no panels attached. {slv3.CABLE}", file=sys.stderr)
     return OK if found else SHORT
 
 
@@ -141,11 +145,14 @@ def render(args: argparse.Namespace) -> int:
 
 
 def check(args: argparse.Namespace) -> int:
-    problems = 0
+    if args.share:
+        print(doctor.share(args.config))
+        return OK
+    failed = 0
     for c in doctor.checks(args.config):
-        problems += not c.ok
-        print(f"{'ok' if c.ok else 'FAIL':4}  {c.what:16} {c.detail}", flush=True)
-    return OK if not problems else SHORT
+        failed += c.status == doctor.FAIL
+        print(doctor.line(c), flush=True)
+    return OK if not failed else SHORT
 
 
 def service_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

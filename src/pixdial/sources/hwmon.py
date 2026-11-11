@@ -66,6 +66,31 @@ class Hwmon(Source):
         return found
 
 
+def chips(root: Path = HWMON) -> list[tuple[str, dict[str, Reading]]]:
+    """Every chip's name with its temperatures, power, fans and currents now (not its voltages, which say little),
+    by label or file name: for a report of the sensors a config can name."""
+    found = []
+    for d in sorted(root.glob("hwmon*")):
+        sensors = {}
+        for f in sorted([*d.glob("*_input"), *d.glob("power*_average")]):
+            stem, _, kind = f.name.rpartition("_")
+            family = stem.rstrip("0123456789")
+            if family == "in":
+                continue
+            unit, scale = UNITS.get(family, ("", 1.0))
+            label = f.with_name(f"{stem}_label")
+            try:
+                name = read(label) if label.exists() else stem
+                sensors[name if kind == "input" else f"{name} {kind}"] = Reading(int(read(f)) / scale, unit)
+            except (OSError, ValueError):  # a sensor that is off now
+                continue
+        try:
+            found.append((read(d / "name"), sensors))
+        except OSError:
+            continue
+    return found
+
+
 def sensor(chips: Mapping[str, list[Path]], chip: str, name: str) -> list[Path]:
     """The input files of a sensor, by file name (temp1) or label (Tctl), on every chip of that name."""
     found = []

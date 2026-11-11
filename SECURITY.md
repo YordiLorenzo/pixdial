@@ -42,3 +42,7 @@ pixdial does not install udev rules or a systemd service automatically.
 CLI output can contain USB serials, device nodes, file paths, readings and source errors. The optional systemd
 unit sends logs to the user journal. Review diagnostic output before sharing it, especially output from your
 own command sources or plugins.
+
+`pixdial doctor --share` prints a report for issues with each serial replaced by panel-1, panel-2, the home
+folder replaced by `~` and the hostname replaced by `host`. Readings and source errors stay in it. To read each
+panel's firmware version, it opens each panel that no program holds for a moment and leaves it dark.

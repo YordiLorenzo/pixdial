@@ -5,8 +5,10 @@ A ConfigError's message says where in the file; the caller adds which file.
 
 from __future__ import annotations
 
+import dataclasses
 import inspect
 import itertools
+import json
 import os
 import tomllib
 from collections import Counter
@@ -205,6 +207,16 @@ def skipped(config: Config, catalog: Catalog) -> dict[str, list[str]]:
         given |= keys
     found = {name: [key for key in cls.needs if key not in given] for name, cls in catalog.designs.items()}
     return {name: missing for name, missing in found.items() if missing}
+
+
+def written(config: Config, serials: Sequence[str]) -> str:
+    """A config file for these SL V3 panels, with the layout they get by default with the config's sources."""
+    panels = tuple(Entry("slv3", {"serial": serial}, str(i + 1)) for i, serial in enumerate(serials))
+    specs = layout(dataclasses.replace(config, panels=panels, layout=()), catalog(config)).default
+    lines = [f"layout = [{', '.join(map(json.dumps, specs))}]"]
+    for serial in serials:
+        lines += ["", "[[panels]]", f"serial = {json.dumps(serial)}"]
+    return "\n".join(lines) + "\n"
 
 
 def devices(config: Config) -> list[tuple[str, Device]]:
