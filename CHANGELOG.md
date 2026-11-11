@@ -13,6 +13,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added a pull request template for hardware-test notes and an issue label and triage guide.
 - Added the Contributor Covenant 2.1 code of conduct with reporting through GitHub.
 - Added systemd user units to the AUR and Nix packages, with package-specific paths and no restart on config errors.
+- Experimental support for the Lian Li UNI FAN TL Wireless LCD (`1cbe:0006`) in the SL V3 driver, with its udev lines.
+- Experimental `amdgpu` source, on by default: AMD GPU temperature, power, utilisation and VRAM, read without root.
+- `pytest -m hardware`: an opt-in test on real panels (frame acknowledgements, 30 frames/s, CPU, memory, a USB
+  reset), left out of the normal run.
 
 ### Changed
 

@@ -25,7 +25,7 @@ The protocol should not be treated as authenticated or secure transport.
 
 ## Sources, plugins and network
 
-Built-in CPU, RAPL and hwmon sources read local files. NVML queries the local NVIDIA library.
+Built-in CPU, RAPL, hwmon and amdgpu sources read local files. NVML queries the local NVIDIA library.
 There is no telemetry, built-in network service or automatic download at runtime.
 
 Python plugins execute code with the user's permissions. The command source executes the configured argument

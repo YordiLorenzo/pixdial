@@ -24,6 +24,12 @@ uv run pytest -q
 
 CI runs on Ubuntu with Python 3.12, 3.13 and 3.14. `mypy` uses the strict settings and file list in `pyproject.toml`.
 Tests use fake hardware and synthetic readings; no attached panel is needed.
+
+`uv run pytest -m hardware` runs the one test on real panels, which the normal run leaves out. It needs Linux, at
+least one SL V3 or TL panel with the udev rule, and no other program with a panel open: stop pixdial first
+(`systemctl --user stop pixdial`). It sends 30 frames a second to every panel at once for 10 minutes
+(`--hardware-seconds` changes that), then resets each panel once over USB. It prints a report: frames sent and
+acknowledged, frames per second, CPU, resident memory and the time each panel took to come back after its reset.
 Format files you change with `uv run ruff format PATH`, then rerun the checks.
 
 ## Golden images

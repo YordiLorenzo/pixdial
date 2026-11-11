@@ -12,7 +12,8 @@ import pytest
 
 from pixdial.readings import Reading
 from pixdial.runtime import Report, Sampler
-from pixdial.sources import Command, Cpu, Hwmon, Rapl, Source
+from pixdial.sources import Amdgpu, Command, Cpu, Hwmon, Rapl, Source
+from pixdial.sources.amdgpu import GIB
 
 
 def chip(root: Path, n: int, name: str, files: dict[str, str]) -> None:
@@ -188,3 +189,88 @@ def test_readings_from_before_a_sleep_are_dropped() -> None:
     sampler.resumed()
     assert sampler.fresh(0.0) == {}
     assert sampler.resets == [True]
+
+
+def card(drm: Path, n: int, driver: str, files: dict[str, str], hwmon: dict[str, str] | None = None) -> Path:
+    """/sys/class/drm/card<n> of a GPU with this driver, with a connector beside it, its device files and its hwmon
+    files (None: not there yet)."""
+    device = drm / f"card{n}" / "device"
+    device.mkdir(parents=True)
+    (drm / f"card{n}-DP-1").mkdir()
+    (drm.parent / "drivers" / driver).mkdir(parents=True, exist_ok=True)
+    (device / "driver").symlink_to(drm.parent / "drivers" / driver)
+    for file, text in files.items():
+        (device / file).write_text(text + "\n")
+    if hwmon is not None:
+        chip(device / "hwmon", 3 + n, "amdgpu", hwmon)
+    return device
+
+
+def vram(used: float, total: float) -> dict[str, str]:
+    return {"mem_info_vram_used": str(int(used * GIB)), "mem_info_vram_total": str(int(total * GIB))}
+
+
+RX6800 = {"gpu_busy_percent": "37", **vram(4, 16)}
+RX6800_HWMON = {
+    "temp1_input": "52000",
+    "temp1_crit": "100000",
+    "temp2_input": "61000",  # the junction
+    "power1_average": "187000000",
+    "power1_cap": "255000000",
+}
+
+
+def test_amdgpu_reads_a_card_with_power1_average(tmp_path: Path) -> None:
+    card(tmp_path / "drm", 0, "amdgpu", RX6800, RX6800_HWMON)
+    assert Amdgpu(str(tmp_path / "drm")).read() == {
+        "gpu_c": Reading(52.0, "°C", max=100.0),
+        "gpu_w": Reading(187.0, "W", max=255.0),
+        "gpu_use": Reading(37.0, "%"),
+        "gpu_vram": Reading(4.0, "GiB", max=16.0),
+    }
+
+
+def test_amdgpu_reads_power1_input_on_the_card_with_the_most_vram(tmp_path: Path) -> None:
+    drm = tmp_path / "drm"
+    card(drm, 0, "nvidia", {})
+    apu = {"temp1_input": "41000", "power1_input": "45000000"}  # a processor's GPU: no crit, the chip's power
+    card(drm, 1, "amdgpu", {"gpu_busy_percent": "3", **vram(0.25, 0.5)}, apu)
+    rx7900 = {"temp1_input": "48000", "temp1_crit": "100000", "power1_input": "301000000", "power1_cap": "339000000"}
+    card(drm, 2, "amdgpu", {"gpu_busy_percent": "99", **vram(20, 24)}, rx7900)
+    assert Amdgpu(str(drm)).read() == {
+        "gpu_c": Reading(48.0, "°C", max=100.0),
+        "gpu_w": Reading(301.0, "W", max=339.0),
+        "gpu_use": Reading(99.0, "%"),
+        "gpu_vram": Reading(20.0, "GiB", max=24.0),
+    }
+
+
+def test_amdgpu_finds_a_card_and_its_hwmon_files_that_come_late(tmp_path: Path) -> None:
+    drm = tmp_path / "drm"
+    source = Amdgpu(str(drm))
+    assert source.read() == {}  # the driver not loaded yet
+    device = card(drm, 0, "amdgpu", RX6800)
+    assert set(source.read()) == {"gpu_use", "gpu_vram"}  # the card, its hwmon files not yet
+    chip(device / "hwmon", 3, "amdgpu", RX6800_HWMON)
+    assert set(source.read()) == {"gpu_c", "gpu_w", "gpu_use", "gpu_vram"}
+
+
+def test_amdgpu_is_silent_without_an_amd_gpu(tmp_path: Path) -> None:
+    card(tmp_path / "drm", 0, "nvidia", {})
+    lines: list[str] = []
+    sources: list[tuple[str, Source]] = [("nvidia only", Amdgpu(str(tmp_path / "drm"))), ("no drm", Amdgpu("/nope"))]
+    sampler = Sampler(sources, Report(lines.append), clock=lambda: 0.0)
+    sampler.sample(0)
+    sampler.sample(1)
+    assert lines == []
+    assert sampler.fresh(0.0) == {}
+
+
+def test_amdgpu_keeps_the_readings_it_can_read(tmp_path: Path) -> None:
+    device = card(tmp_path / "drm", 0, "amdgpu", RX6800, RX6800_HWMON)
+    (device / "gpu_busy_percent").write_text("")
+    assert set(Amdgpu(str(tmp_path / "drm")).read()) == {"gpu_c", "gpu_w", "gpu_vram"}
+    for f in ("mem_info_vram_used", "hwmon/hwmon3/temp1_input", "hwmon/hwmon3/power1_average"):
+        (device / f).write_text("")
+    with pytest.raises(ValueError):
+        Amdgpu(str(tmp_path / "drm")).read()

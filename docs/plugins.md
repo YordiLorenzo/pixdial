@@ -157,7 +157,9 @@ The file example has nothing to turn off.
 
 Optional `discover()` returns `Found` records for `pixdial devices`; `problem()` reports a permission or presence
 problem for `doctor` without opening the device. Set `id` to the discovery identifier so the CLI can match it to
-its config entry. Other resolutions need corresponding rendering support, not only a new `Device.size`.
+its config entry. A `Found` record's `note` is printed beside it, and a class's `note` beside its name in
+`pixdial list`; the built-in drivers use them to mark experimental models. Other resolutions need corresponding
+rendering support, not only a new `Device.size`.
 
 Keep hardware tests separate from the default suite. Record protocol sources and exactly which commands the
 driver sends. Do not add firmware writes as part of frame delivery.

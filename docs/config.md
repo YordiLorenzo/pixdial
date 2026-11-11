@@ -66,13 +66,16 @@ getent group pixdial || sudo groupadd --system pixdial
 sudo usermod -aG pixdial "$USER"
 sudo tee /etc/udev/rules.d/60-pixdial.rules >/dev/null <<'RULE'
 SUBSYSTEM=="usb", ATTRS{idVendor}=="1cbe", ATTRS{idProduct}=="0005", GROUP="pixdial", MODE="0660"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1cbe", ATTRS{idProduct}=="0006", GROUP="pixdial", MODE="0660"
 RULE
 sudo udevadm control --reload-rules
 sudo udevadm trigger --subsystem-match=usb --action=add
 ```
 
 Log out and back in before starting pixdial so your session picks up the new group. The rule gives group members
-access to every panel with this USB ID. It does not grant access to RAPL counters or other sensor files.
+access to every panel with these USB IDs. It does not grant access to RAPL counters or other sensor files.
+The second line is for the UNI FAN TL Wireless LCD (`1cbe:0006`), which pixdial supports as experimental: it uses
+the SL V3 protocol, but no TL panel has been tested with pixdial yet.
 
 ## Sources
 
@@ -84,6 +87,9 @@ type = "cpu"
 
 [[sources]]
 type = "rapl"
+
+[[sources]]
+type = "amdgpu"
 
 [[sources]]
 type = "nvml"
@@ -100,6 +106,7 @@ A top-level `sources = []` disables sampling.
 | --- | --- | --- |
 | `cpu` | Overall and per-thread load from Linux `/proc/stat`, every 0.5 seconds | `stat`: alternate file |
 | `rapl` | CPU package power from an energy counter, every second | `path`: default `/sys/class/powercap/intel-rapl:0/energy_uj`; your user must be able to read it |
+| `amdgpu` | Experimental. AMD GPU power, temperature, utilisation and VRAM from the amdgpu driver's files, every second | `root`: default `/sys/class/drm` |
 | `nvml` | NVIDIA GPU power, temperature and utilisation, every second | `index`: default 0; needs `libnvidia-ml.so.1` from the NVIDIA driver |
 | `hwmon` | Linux hardware sensors, every second | `readings`: map of reading keys to `chip/sensor`; `root`: default `/sys/class/hwmon` |
 | `command` | Numbers or JSON printed by a program | `run`: argument list; `key`: optional scalar reading name; `period`: seconds, default 5 |
@@ -107,6 +114,14 @@ A top-level `sources = []` disables sampling.
 hwmon accepts a sensor label or file stem, such as `k10temp/Tctl` or `corsairpsu/power1`.
 A list of sensors reports the highest available value and the lowest reported critical limit (or maximum when
 there is no critical limit). Configure the names your Linux drivers expose; there is no automatic PSU mapping.
+
+The `amdgpu` source is experimental: it is tested on copies of the driver's files, not yet on a Radeon card.
+It gives `gpu_c` (the edge temperature, limit: the card's critical temperature), `gpu_w` (`power1_average`, or
+`power1_input` on kernels that give only that, limit: the power cap), `gpu_use` and `gpu_vram` (VRAM in use in
+GiB, limit: the total). With several AMD GPUs it reads the one with the most VRAM. On a processor's built-in GPU,
+`gpu_w` is the power of the whole chip. Without an AMD GPU it gives nothing and logs nothing. It looks for the
+GPU on every read, so a card whose driver loads after pixdial starts is found. It comes before `nvml` in the
+default list, so on a PC with an NVIDIA card and a processor's built-in AMD GPU, the NVIDIA readings win.
 
 CPU load and RAPL need two samples. `doctor` takes those samples one second apart. An unavailable source reports
 an error and is tried again; it does not stop the other sources.
