@@ -29,7 +29,7 @@ from .sources import BUILTIN as SOURCES
 from .sources import Source, hwmon
 
 OK, SKIP, FAIL = "ok", "skip", "FAIL"
-NO_RAQM = "Digits may change width as they count. Install FriBiDi (the fribidi or libfribidi0 package) for raqm."
+NO_RAQM = "Text is set without the font's kerning, a little wider. For raqm, install FriBiDi (fribidi or libfribidi0)."
 HINTS = {  # why a default source gives nothing on many machines, and what follows
     "rapl": "cpu_w (the CPU's power) needs read access to the RAPL counter, which only root has by default.",
     "nvml": "No NVIDIA driver: the GPU readings come from it, so gpu and twin are left out of the rotation.",

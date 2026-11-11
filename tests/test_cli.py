@@ -68,4 +68,4 @@ def test_doctor_says_whether_pillow_has_raqm(
     assert "ok    raqm             yes" in capsys.readouterr().out
     monkeypatch.setattr(ImageFont.core, "HAVE_RAQM", False)
     assert main(["--config", str(config), "doctor"]) == 0
-    assert "skip  raqm             no\n      Digits may change width" in capsys.readouterr().out
+    assert "skip  raqm             no\n      Text is set without the font's kerning" in capsys.readouterr().out
