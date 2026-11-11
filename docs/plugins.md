@@ -153,6 +153,7 @@ class Folder(Device):
 ```
 
 `show()` receives a 400 × 400 RGB Pillow image. Config options are passed to the constructor and checked by name.
+Each panel's `open()`, `show()`, `off()` and `close()` run in a thread of its own, so a slow device holds up no other.
 `open()` returns a short status string; an `OSError` causes a retry after a wait that doubles from 0.25 to 10 seconds.
 `show()` can raise `OSError` on disconnect, which closes the device so it can be reopened.
 Any other error from `show()` is reported for that panel and also closes the device; the other panels go on.
