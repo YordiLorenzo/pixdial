@@ -41,7 +41,7 @@ You need Linux, Python 3.12 or newer, [uv](https://docs.astral.sh/uv/getting-sta
    pixdial setup
    ```
 
-   Setup finds the attached panels and gives your user access to them: it prints the udev commands, then runs
+   Setup finds the attached panels and gives your user access to them. It prints the udev commands, then runs
    them through sudo, which asks for your password once. It writes `~/.config/pixdial/config.toml` with a design
    for each panel and runs the `pixdial doctor` checks. `pixdial setup --dry-run` shows the same steps and
    changes nothing. If a display is upside down, add `turn = 180` to its `[[panels]]` table in the config.
@@ -56,9 +56,10 @@ You need Linux, Python 3.12 or newer, [uv](https://docs.astral.sh/uv/getting-sta
    `pixdial run`; Ctrl-C stops it and turns the panels dark.
 
 On a machine where pixdial starts with nobody logged in (linger, or no login at its seat), setup installs a group
-rule instead and adds your user to the `pixdial` group. Log out and back in (with linger, reboot) before step 3.
+rule instead and adds your user to the `pixdial` group. Log out and back in (on a machine with linger, reboot),
+then run step 3.
 
-In another terminal, `pixdial show crown:ember` changes the configured panel's design and theme.
+To change the designs, give `pixdial show` one design per panel, such as `pixdial show crown:ember` for one panel.
 `pixdial show rotate` cycles through the designs.
 
 <details>
@@ -226,9 +227,9 @@ is acknowledged. I run pixdial on those panels every day, next to lian-li-linux.
 [sgtaziz/lian-li-linux](https://github.com/sgtaziz/lian-li-linux) is a Linux replacement for L-Connect 3, under
 the MIT licence. It controls fan speed, pumps and RGB lighting on many Lian Li devices, and drives their LCDs with
 images, GIFs, video, sensor presets, templates and a template editor. pixdial's SL V3 driver follows its daemon's
-`slv3_lcd.rs` and `crypto.rs` at v1.2.6 (Copyright (c) 2026 sgtaziz, MIT). Choose lian-li-linux for the fans, the
-RGB and layouts you build in an editor. pixdial draws the LCDs only, with its own designs, hardware-derived ranges
-and Python plugins, and runs beside it.
+`slv3_lcd.rs` and `crypto.rs` at v1.2.6 (Copyright (c) 2026 sgtaziz, MIT). Choose lian-li-linux for fans, RGB and
+LCD layouts you build in an editor. pixdial draws the LCDs only, with its own designs, hardware-derived ranges and
+Python plugins, and runs beside it.
 
 Rendering uses [Pillow](https://python-pillow.org/) and [NumPy](https://numpy.org/), with
 [cryptography](https://cryptography.io/) for the panel's command headers. The bundled
@@ -249,8 +250,8 @@ pixdial is not affiliated with Lian Li or the hardware manufacturers named here.
 - **A panel stays black, or `pixdial devices` finds none.** Each LCD needs its own USB cable to a USB 2 header
   on the motherboard: the wireless dongle does not carry frames. `lsusb | grep 1cbe` lists the panels attached.
 - **GPU readings are missing.** NVIDIA readings need the NVIDIA driver. AMD readings come from the experimental
-  `amdgpu` source: if `doctor` shows nothing for `source amdgpu` on a Radeon card, please send a
-  [Radeon report](https://github.com/YordiLorenzo/pixdial/issues/new?template=radeon.yml). The default rotation
+  `amdgpu` source: if `doctor` shows nothing for `source amdgpu` on a Radeon card, a
+  [Radeon report](https://github.com/YordiLorenzo/pixdial/issues/new?template=radeon.yml) helps. The default rotation
   leaves out designs whose readings no source gives, and `doctor` lists them.
 
 **To report a problem,** open a [bug report](https://github.com/YordiLorenzo/pixdial/issues/new?template=bug.yml)
