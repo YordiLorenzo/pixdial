@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import argparse
 import signal
+import subprocess
 import sys
 import threading
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
-from . import NAME, __version__, demo, doctor, plugins
+from . import NAME, __version__, demo, doctor, plugins, service
 from . import config as cfg
 from .designs import BUILTIN as DESIGNS
 from .designs import THEMES, Design
@@ -61,6 +62,7 @@ def parser() -> argparse.ArgumentParser:
 
     doctor_ = sub.add_parser("doctor", help="check the config, panels, permissions and sources")
     doctor_.set_defaults(command=check)
+    service_parser(sub)
     return p
 
 
@@ -144,3 +146,47 @@ def check(args: argparse.Namespace) -> int:
         problems += not c.ok
         print(f"{'ok' if c.ok else 'FAIL':4}  {c.what:16} {c.detail}", flush=True)
     return OK if not problems else SHORT
+
+
+def service_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    service_ = sub.add_parser("service", help="run `run` at every login, as a systemd user service")
+    actions = service_.add_subparsers(required=True, metavar="ACTION")
+    for name, command, about in (
+        ("install", service_install, "install the unit for this pixdial, enable it and start it"),
+        ("remove", service_remove, "stop it, disable it and delete the unit"),
+        ("status", service_status, "systemctl's status of it, with its last log lines"),
+    ):
+        actions.add_parser(name, help=about).set_defaults(command=systemctl_errors(command))
+
+
+def systemctl_errors(command: Callable[[argparse.Namespace], int]) -> Callable[[argparse.Namespace], int]:
+    """The command, with a failed or missing systemctl as one line and exit status 1."""
+
+    def checked(args: argparse.Namespace) -> int:
+        try:
+            return command(args)
+        except (OSError, subprocess.CalledProcessError) as error:
+            print(f"{NAME}: {error}", file=sys.stderr)
+            return SHORT
+
+    return checked
+
+
+def service_install(args: argparse.Namespace) -> int:
+    path = service.install(args.config)
+    print(f"wrote {path}, enabled and started it: `run` now starts at every login")
+    if not service.lingers():
+        print("To start it at boot, before you log in: loginctl enable-linger")
+    return OK
+
+
+def service_remove(args: argparse.Namespace) -> int:
+    if not service.remove():
+        print(f"{NAME}: no unit at {service.path()}", file=sys.stderr)
+        return SHORT
+    print(f"stopped and disabled {service.UNIT}, and deleted {service.path()}")
+    return OK
+
+
+def service_status(args: argparse.Namespace) -> int:
+    return OK if service.status() == 0 else SHORT

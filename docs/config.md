@@ -181,22 +181,21 @@ Per-pin current has its own warning threshold. These are display scales, not har
 
 ## Run at login
 
-After installing with `uv tool install`, run these Linux/systemd commands from a source checkout:
-
 ```sh
-mkdir -p ~/.config/systemd/user
-cp src/pixdial/data/pixdial.service ~/.config/systemd/user/
-systemctl --user daemon-reload
-systemctl --user enable --now pixdial
+pixdial service install
 ```
 
-The unit starts `~/.local/bin/pixdial run` and restarts it after exit. Edit its `ExecStart` if your executable
-is elsewhere. To inspect it or stop it and disable startup:
+This installs the systemd user unit that the package ships, at `~/.config/systemd/user/pixdial.service`, with
+`ExecStart` pointed at the pixdial you ran it with (and at the `--config` file, if you gave one). It enables the
+unit and starts it, or restarts it if it was running. Run it again after you move or reinstall pixdial.
+
+A config error (exit status 2) stops the service once, with the error in the journal. Any other exit restarts it
+after 10 seconds. To inspect it, or to stop it and take the unit out again:
 
 ```sh
-systemctl --user status pixdial
+pixdial service status
 journalctl --user -u pixdial
-systemctl --user disable --now pixdial
+pixdial service remove
 ```
 
 For operation after logout, an administrator may need to enable user lingering. A session-based `uaccess` rule

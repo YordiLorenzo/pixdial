@@ -5,6 +5,8 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+- `pixdial service install`, `remove` and `status`: the bundled user unit with ExecStart pointed at the running pixdial.
+- A config error (exit status 2) stops the service once instead of restarting it every 10 seconds.
 - Text draws without libraqm: font features go to Pillow only when it has raqm, and `doctor` says whether it has.
 
 ## [0.1.0] - 2026-11-06
