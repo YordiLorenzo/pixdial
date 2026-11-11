@@ -6,6 +6,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 - Experimental support for the Lian Li UNI FAN TL Wireless LCD (`1cbe:0006`) in the SL V3 driver, with its udev lines.
+- Experimental `amdgpu` source, on by default: AMD GPU temperature, power, utilisation and VRAM, read without root.
 
 ## [0.1.0] - 2026-11-06
 

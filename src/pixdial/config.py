@@ -43,6 +43,7 @@ class Entry:
 DEFAULT_SOURCES = (
     Entry("cpu", {}, "cpu"),
     Entry("rapl", {}, "rapl"),
+    Entry("amdgpu", {}, "amdgpu"),  # before nvml, so an NVIDIA card's readings win over a Ryzen's built-in GPU
     Entry("nvml", {}, "nvml"),
     Entry("hwmon", {"readings": {"cpu_c": ["k10temp/Tctl", "coretemp/Package id 0"]}}, "hwmon"),
 )
