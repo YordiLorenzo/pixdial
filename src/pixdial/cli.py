@@ -10,7 +10,7 @@ import threading
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
-from . import NAME, __version__, demo, doctor, plugins, service
+from . import NAME, __version__, demo, doctor, plugins, service, setup
 from . import config as cfg
 from .designs import BUILTIN as DESIGNS
 from .designs import THEMES, Design
@@ -64,6 +64,7 @@ def parser() -> argparse.ArgumentParser:
     doctor_.add_argument("--share", action="store_true", help="the same as Markdown for an issue, without serials")
     doctor_.set_defaults(command=check)
     service_parser(sub)
+    setup_parser(sub)
     return p
 
 
@@ -182,8 +183,11 @@ def systemctl_errors(command: Callable[[argparse.Namespace], int]) -> Callable[[
 def service_install(args: argparse.Namespace) -> int:
     path = service.install(args.config)
     print(f"wrote {path}, enabled and started it: `run` now starts at every login")
-    if not service.lingers():
-        print("To start it at boot, before you log in: loginctl enable-linger")
+    if setup.needs_group_rule():
+        print(f"With nobody at the machine after a reboot, it can't open the panels: `{NAME} setup` gives them a")
+        print("rule that works then")
+    elif not service.lingers():
+        print(f"To start it at boot, before you log in: loginctl enable-linger, then `{NAME} setup` again")
     return OK
 
 
@@ -197,3 +201,13 @@ def service_remove(args: argparse.Namespace) -> int:
 
 def service_status(args: argparse.Namespace) -> int:
     return OK if service.status() == 0 else SHORT
+
+
+def setup_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    setup_ = sub.add_parser("setup", help="find the panels, give this user access, write the config and check it")
+    setup_.add_argument("--dry-run", action="store_true", help="print what it would do; write and run nothing")
+    setup_.set_defaults(command=set_up)
+
+
+def set_up(args: argparse.Namespace) -> int:
+    return OK if setup.setup(args.config, args.dry_run) else SHORT

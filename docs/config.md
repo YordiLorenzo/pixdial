@@ -53,13 +53,15 @@ pixdial show
 
 ## USB permissions
 
-Linux needs read and write access to the panel's node under `/dev/bus/usb/`. The
-[quick start](../README.md#quick-start) installs the bundled `uaccess` rule for a local login.
-`pixdial devices` lists the serial and access status; `pixdial doctor` checks the configured panels without
-opening them.
+Linux needs read and write access to the panel's node under `/dev/bus/usb/`. `pixdial setup` gives it: it
+prints the commands, then runs them through sudo. With a local login at the machine it installs the bundled
+`uaccess` rule. Where the service starts with nobody logged in at the machine (linger, or no session at its seat),
+it installs the group rule below instead, and adds your user to the `pixdial` group. `pixdial setup --dry-run`
+prints the commands without running them. `pixdial devices` lists the serial and access status; `pixdial doctor`
+checks the configured panels without opening them.
 
-On a server without an active local login, an administrator can instead use a dedicated group. The following
-Linux-only commands create `pixdial` if needed, add your user and install a group rule:
+By hand, on a server without an active local login, these Linux-only commands create `pixdial` if needed, add your
+user and install the group rule:
 
 ```sh
 getent group pixdial || sudo groupadd --system pixdial
@@ -198,5 +200,6 @@ journalctl --user -u pixdial
 pixdial service remove
 ```
 
-For operation after logout, an administrator may need to enable user lingering. A session-based `uaccess` rule
-also needs replacing with a group rule for that use. See [Security](../SECURITY.md) before sharing logs.
+For operation after logout, enable user lingering (`loginctl enable-linger`), then run `pixdial setup` again:
+the `uaccess` rule gives no access with nobody logged in, so setup replaces it with the group rule.
+`pixdial service install` says so when it is needed. See [Security](../SECURITY.md) before sharing logs.

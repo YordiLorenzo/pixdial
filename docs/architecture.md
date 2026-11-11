@@ -44,8 +44,10 @@ Those tests do not establish compatibility with other panel models.
 
 Configuration is under `XDG_CONFIG_HOME`; the current layout is under `XDG_STATE_HOME`.
 See [Configuration](config.md) for defaults and the interaction between config and saved selections.
-`render` and file devices create local output at the selected paths. The optional systemd unit is installed by
-the user; pixdial does not install a service or permission rule on its own.
+`render` and file devices create local output at the selected paths. `pixdial service install` installs the
+systemd user unit, as the user. `pixdial setup` installs the udev rule (and, on a machine where the service starts
+with nobody logged in at it, the `pixdial` group with the user in it) through sudo, after it prints the commands.
+Those commands are the only ones that run as root; pixdial itself runs as the user.
 
 Built-in sensor readers use `/proc`, `/sys` or NVML without network requests. The runtime has no telemetry or
 network listener. Command sources and Python plugins can run arbitrary code with the user's permissions,

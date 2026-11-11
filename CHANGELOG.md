@@ -5,6 +5,8 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+- `pixdial setup`: finds the panels, gives this user access (it prints the udev commands, then runs them through sudo), writes the config with a layout, and runs the doctor checks. On a machine that lingers or has no login at its seat, it installs a group rule and adds the user to the `pixdial` group. `--dry-run` writes and runs nothing.
+- `service install` says when a headless machine needs the group rule from `setup`.
 - `doctor --share`: a Markdown report for issues (versions, distro, kernel, USB ids, panel firmware, sources, hwmon chips, the readings each design misses), with serials, the hostname and the home folder taken out.
 - `doctor` shows a default source that is missing as "skip" with a hint, and exits 0; with no panels in the config it lists the attached ones and prints a config for them.
 - `doctor` and `devices` name the program that holds a panel, and point to lian-li-linux when another program has claimed it.
