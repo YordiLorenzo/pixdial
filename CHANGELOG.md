@@ -5,6 +5,8 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+- Text draws without libraqm: font features go to Pillow only when it has raqm, and `doctor` says whether it has.
+
 ## [0.1.0] - 2026-11-06
 
 ### Added

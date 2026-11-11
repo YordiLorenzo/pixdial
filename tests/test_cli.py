@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from PIL import Image
+from PIL import Image, ImageFont
 
 from pixdial.cli import main
 
@@ -58,3 +58,13 @@ def test_list_and_doctor(config: Path, capsys: pytest.CaptureFixture[str]) -> No
     assert main(["--config", str(config), "doctor"]) == 0
     out = capsys.readouterr().out
     assert "ok    panel top" in out and "FAIL" not in out
+
+
+def test_doctor_says_whether_pillow_has_raqm(
+    config: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert main(["--config", str(config), "doctor"]) == 0
+    assert "raqm             yes" in capsys.readouterr().out
+    monkeypatch.setattr(ImageFont.core, "HAVE_RAQM", False)
+    assert main(["--config", str(config), "doctor"]) == 0
+    assert "raqm             no: digits may change width" in capsys.readouterr().out

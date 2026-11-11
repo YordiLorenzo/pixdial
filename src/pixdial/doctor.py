@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+from PIL import features
 
 from . import config as cfg
 from . import plugins
@@ -20,6 +21,8 @@ from .devices import Device
 from .readings import Reading
 from .sources import BUILTIN as SOURCES
 from .sources import Source
+
+NO_RAQM = "digits may change width as they count (install FriBiDi: the fribidi or libfribidi0 package)"
 
 
 @dataclass(frozen=True)
@@ -40,6 +43,7 @@ def checks(path: Path | None, wait: Callable[[float], None] = time.sleep) -> Ite
     yield Check("config", True, str(config.path) if exists else f"none at {config.path}: the defaults")
     missing = [w for w in ("Black", "Bold", "Regular") if not (FONTS / f"Lato-{w}.ttf").exists()]
     yield Check("fonts", not missing, f"missing Lato {', '.join(missing)}" if missing else str(FONTS))
+    yield Check("raqm", True, "yes" if features.check_feature("raqm") else f"no: {NO_RAQM}")
     for kind, base, builtin in (
         ("designs", Design, DESIGNS),
         ("sources", Source, SOURCES),
