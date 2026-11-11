@@ -9,9 +9,8 @@ license=('GPL-3.0-or-later' 'OFL-1.1')
 depends=('python>=3.12' 'python-numpy' 'python-pillow' 'python-cryptography')
 makedepends=('python-build' 'python-installer' 'python-hatchling' 'python-hatch-fancy-pypi-readme')
 checkdepends=('python-pytest')
-# Replace both placeholders from PyPI after 0.1.1 is published. See packaging/README.md.
-source=("https://files.pythonhosted.org/packages/REPLACE_WITH_0.1.1_SDIST_PATH/$pkgname-$pkgver.tar.gz")
-sha256sums=('REPLACE_WITH_0.1.1_SDIST_SHA256')
+source=("https://files.pythonhosted.org/packages/23/73/f837434a81232ec37067fff062b96078ee20ae90174048b5fefa3cfc9267/$pkgname-$pkgver.tar.gz")
+sha256sums=('ece1b98e0ba54a41f6d9d10a4b7f98b94ad3e026e15c395b828cb71015d6dfe3')
 
 build() {
   cd "$pkgname-$pkgver"

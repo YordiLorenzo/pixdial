@@ -13,8 +13,7 @@ python3Packages.buildPythonApplication (finalAttrs: {
 
   src = fetchPypi {
     inherit (finalAttrs) pname version;
-    # Replace with the published 0.1.1 sdist's SRI hash. See packaging/README.md.
-    hash = "REPLACE_WITH_0.1.1_SDIST_SRI_SHA256";
+    hash = "sha256-7OG5jgulSkH22dEKS3+YuUrT4CbhXDlbgoy3EBXW3+M=";
   };
 
   build-system = with python3Packages; [

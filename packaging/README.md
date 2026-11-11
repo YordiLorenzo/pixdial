@@ -110,8 +110,8 @@ with `makepkg --printsrcinfo` on Arch before submitting.
 | `checkdepends` | One row: `python-pytest`. |
 | `makedepends` | Four rows: `python-build`, `python-installer`, `python-hatchling`, `python-hatch-fancy-pypi-readme`. |
 | `depends` | Four rows: `python>=3.12`, `python-numpy`, `python-pillow`, `python-cryptography`. |
-| `source` | The PyPI URL with `$pkgname` and `$pkgver` expanded to `pixdial` and `0.1.1`; its path is a placeholder until publication. |
-| `sha256sums` | `REPLACE_WITH_0.1.1_SDIST_SHA256` until publication. |
+| `source` | The PyPI URL of the 0.1.1 sdist, with `$pkgname` and `$pkgver` expanded to `pixdial` and `0.1.1`. |
+| `sha256sums` | The SHA-256 of that sdist, as PyPI lists it. |
 
 The maintainer comment and `build()`, `check()` and `package()` functions are not `.SRCINFO`
 fields. No split-package overrides or extra metadata fields are used.
@@ -159,13 +159,11 @@ fields. No split-package overrides or extra metadata fields are used.
 ## Release updates
 
 Follow [Releasing](../CONTRIBUTING.md#releasing) first. The content-addressed PyPI sdist
-URL and its checksum are not known before publication. The `REPLACE_WITH_0.1.1_*`
-values in `aur/PKGBUILD`, `aur/.SRCINFO` and `nix/package.nix` are deliberate placeholders,
-not usable source paths or hashes. Do not submit them or replace the checksum with `SKIP`.
+URL and its checksum are known only after publication. Never replace the checksum with `SKIP`.
 
-After the release workflow has published 0.1.1, read the sdist entry in
-`https://pypi.org/pypi/pixdial/0.1.1/json`. Copy its `url` and `digests.sha256` into
-`source` and `sha256sums` in `aur/PKGBUILD`. Keep `pkgver=0.1.1` and `pkgrel=1`, then
+After a release is published, read the sdist entry in
+`https://pypi.org/pypi/pixdial/<version>/json`. Copy its `url` and `digests.sha256` into
+`source` and `sha256sums` in `aur/PKGBUILD`. Set `pkgver` to the release and `pkgrel=1`, then
 regenerate `.SRCINFO` with `makepkg --printsrcinfo` on Arch. Replace the SRI `hash` in
 `nix/package.nix`; `nix hash convert --hash-algo sha256 --to sri HEX_SHA256` converts
 the same sdist checksum. For later releases, update both versions and reset `pkgrel`

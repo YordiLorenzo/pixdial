@@ -15,7 +15,7 @@ pkgbase = pixdial
 	depends = python-numpy
 	depends = python-pillow
 	depends = python-cryptography
-	source = https://files.pythonhosted.org/packages/REPLACE_WITH_0.1.1_SDIST_PATH/pixdial-0.1.1.tar.gz
-	sha256sums = REPLACE_WITH_0.1.1_SDIST_SHA256
+	source = https://files.pythonhosted.org/packages/23/73/f837434a81232ec37067fff062b96078ee20ae90174048b5fefa3cfc9267/pixdial-0.1.1.tar.gz
+	sha256sums = ece1b98e0ba54a41f6d9d10a4b7f98b94ad3e026e15c395b828cb71015d6dfe3
 
 pkgname = pixdial
