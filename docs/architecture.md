@@ -20,11 +20,12 @@ the device. Designs contain no I/O; sources and devices handle it at either end.
 5. A changed frame goes to the panel's own thread, which sends the newest frame it has, so a slow or hung panel
    holds up only itself. An unchanged frame is resent after 30 seconds; switching designs blends over 0.4 seconds.
 
-Failed device opens are retried after 10 seconds. After a failed send, the panel is closed and opened again after
-a wait that doubles from 0.2 to 10 seconds, and the error is logged once, not once per frame. A source failure does not stop other sources. A design that
-fails as it starts or while it draws, and a device error, are reported for that panel only: the other panels go on.
-A design that fails as it starts is skipped, and its panel keeps the design it shows. After resume, the runtime
-drops old readings, resets source handles and reopens devices.
+After a failed open or send, the panel is closed and tried again after a wait that doubles from 0.2 to 10 seconds
+(`RETRY_FIRST` and `RETRY_MAX` in `runtime/sender.py`). The error is logged once, not once per frame. A source
+failure does not stop other sources. A design that fails as it starts or while it draws, and a device error, are
+reported for that panel only: the other panels go on. A design that fails as it starts is skipped, and its panel
+keeps the design it shows. After resume, the runtime drops old readings, also those of a read under way during the
+sleep, resets source handles and reopens the panels at once, then with the same doubling wait until they are back.
 Normal shutdown calls each open device's `off()` and `close()`.
 
 ## SL V3 transport

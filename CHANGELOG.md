@@ -14,6 +14,9 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Each panel sends its frames from a thread of its own, so a hung panel no longer slows the others to 1 frame/s.
 - After a failed send, a panel is opened again after a wait that doubles from 0.2 s to 10 s, not at once, and the
   error is logged once, not once per frame.
+- A panel that is unplugged, or not back yet after a resume, is tried again with the same doubling wait, not every
+  10 s, so it is back within about a second of its return.
+- A source read under way as the machine went to sleep no longer brings back a reading from before the sleep.
 
 ## [0.1.0] - 2026-11-06
 

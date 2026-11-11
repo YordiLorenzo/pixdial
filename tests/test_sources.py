@@ -187,4 +187,41 @@ def test_readings_from_before_a_sleep_are_dropped() -> None:
     sampler.sample(0)
     sampler.resumed()
     assert sampler.fresh(0.0) == {}
-    assert sampler.resets == [True]
+
+
+class Asleep(Source):
+    """A source whose first read is under way as the machine sleeps; it hands back a reading from before."""
+
+    period = 0.01
+
+    def __init__(self) -> None:
+        self.reading, self.woke, self.again, self.done = (threading.Event() for _ in range(4))
+        self.resets = 0
+
+    def read(self) -> dict[str, Reading]:
+        if not self.reading.is_set():
+            self.reading.set()
+            self.woke.wait(5)
+            return {"x": Reading(1.0)}
+        self.again.set()
+        self.done.wait(5)
+        return {}
+
+    def reset(self) -> None:
+        self.resets += 1
+
+
+def test_a_reading_begun_before_a_sleep_is_dropped_and_the_source_reset() -> None:
+    source = Asleep()
+    sampler = Sampler([("asleep", source)], Report(lambda line: None))
+    sampler.start()
+    try:
+        assert source.reading.wait(2)
+        sampler.resumed()
+        source.woke.set()
+        assert source.again.wait(2)  # the first read is over
+        assert sampler.fresh(time.monotonic()) == {}
+        assert source.resets == 1
+    finally:
+        sampler.stop()
+        source.done.set()

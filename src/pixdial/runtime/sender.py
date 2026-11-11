@@ -13,14 +13,16 @@ from PIL import Image
 from ..devices import Device
 from .report import Report
 
-RETRY = 10  # s between tries to open a panel that couldn't be opened
-RETRY_FIRST, RETRY_MAX = 0.2, 10.0  # s: the wait to reopen a panel after a failed send, doubled each time in a row
+# s: the wait before the next try to open a panel that failed (unplugged, held by another program, or not back yet
+# after a resume), doubled for each failure in a row up to RETRY_MAX
+RETRY_FIRST, RETRY_MAX = 0.2, 10.0
 
 
 class Sender:
     """Keeps a panel open and sends it the newest frame the screen posted: one frame waits at most, and a newer one
-    replaces it. After a failed send it closes the panel and opens it again after a wait that doubles from RETRY_FIRST
-    to RETRY_MAX; once the panel has worked for RETRY_MAX seconds, the next failure waits RETRY_FIRST again."""
+    replaces it. After a failed open or send it closes the panel and tries again after a wait that doubles from
+    RETRY_FIRST to RETRY_MAX; after a resume, or once the panel has worked for RETRY_MAX seconds, the waits start
+    over."""
 
     def __init__(self, name: str, device: Device, report: Report, clock: Callable[[], float] = time.monotonic) -> None:
         self.name, self.device, self.report, self.clock = name, device, report, clock
@@ -32,7 +34,7 @@ class Sender:
         self.info = ""  # what the panel said as it opened, logged with the first frame it takes
         self.shown = False  # a frame went out since it opened
         self.opened_at = self.retry_at = -math.inf
-        self.wait = 0.0  # the last wait before a reopen
+        self.wait = 0.0  # the last wait before a try to open it; 0: none since it worked
         self.thread = threading.Thread(target=self.run, daemon=True, name=f"panel {name}")
 
     def post(self, frame: Image.Image) -> None:
@@ -79,7 +81,7 @@ class Sender:
             reopening, self.reopening = self.reopening, False
         if reopening:
             self.close()
-            self.retry_at = -math.inf  # at once
+            self.retry_at, self.wait = -math.inf, 0.0  # at once
         if not self.open and (self.clock() < self.retry_at or not self.connect()):
             return
         if frame is None:
@@ -88,9 +90,7 @@ class Sender:
             self.device.show(frame)
         except Exception as error:  # OSError: unplugged, re-enumerated after a sleep, or another program took it;
             # anything else: a frame the driver can't take, or its bug. Opened again either way
-            worked = self.shown and self.clock() - self.opened_at >= RETRY_MAX
-            self.wait = RETRY_FIRST if worked or not self.wait else min(2 * self.wait, RETRY_MAX)
-            self.failed(error, self.wait)
+            self.failed(error)
             return
         if not self.shown:
             self.shown = True
@@ -100,16 +100,18 @@ class Sender:
         try:
             self.info = self.device.open()
         except Exception as error:  # another program has it, it is gone, or the driver's bug
-            self.failed(error, RETRY)
+            self.failed(error)
             return False
         self.open, self.shown, self.opened_at = True, False, self.clock()
         self.opens += 1
         return True
 
-    def failed(self, error: Exception, wait: float) -> None:
+    def failed(self, error: Exception) -> None:
         self.report(f"{self.name} panel", error if isinstance(error, OSError) else repr(error))
+        worked = self.open and self.shown and self.clock() - self.opened_at >= RETRY_MAX
         self.close()
-        self.retry_at = self.clock() + wait
+        self.wait = RETRY_FIRST if worked or not self.wait else min(2 * self.wait, RETRY_MAX)
+        self.retry_at = self.clock() + self.wait
 
     def close(self) -> None:
         if self.open:

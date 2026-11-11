@@ -217,23 +217,75 @@ def test_a_new_design_fades_in_over_the_last_frame(tmp_path: Path) -> None:
     assert delays[0] == pytest.approx(FAST) and delays[-1] == pytest.approx(SLOW)
 
 
-def test_a_panel_that_will_not_open_is_tried_every_10_s(tmp_path: Path) -> None:
-    rig = Rig(tmp_path, ("minimal",), [Panel(fails=2)])
+def test_a_panel_that_will_not_open_is_tried_after_a_wait_that_doubles(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("minimal",), [Panel(fails=7)])
     rig.set(cpu_c=40)
-    rig.run_for(25)
-    assert rig.panels[0].opens == 3
-    assert rig.panels[0].frames and rig.panels[0].frames[0][0] == pytest.approx(1020, abs=0.11)
+    rig.run_for(40)
+    waits = [b - a for a, b in itertools.pairwise(rig.panels[0].opened)]
+    assert waits == pytest.approx([0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 10], abs=0.11)  # a tick's lag at most
+    assert rig.panels[0].frames[0][0] == pytest.approx(1022.6, abs=0.11)
     assert [line for line in rig.lines if "panel" in line] == ["0 panel: busy", "0 panel: working, info fake"]
 
 
-def test_a_resume_reopens_the_panels_and_resets_the_sources(tmp_path: Path) -> None:
+class Unplugged(Panel):
+    """A panel pulled out at `out` and plugged in again at `back`, on the rig's clock."""
+
+    def __init__(self, out: float, back: float) -> None:
+        super().__init__()
+        self.out, self.back = out, back
+
+    def gone(self) -> bool:
+        assert self.clock is not None
+        return self.out <= self.clock.monotonic() < self.back
+
+    def open(self) -> str:
+        info = super().open()
+        if self.gone():
+            raise FileNotFoundError("no SL V3 LCD with serial 1")
+        return info
+
+    def show(self, image: Image.Image) -> None:
+        if self.gone():
+            raise OSError(errno.ENODEV, "No such device")
+        super().show(image)
+
+
+def test_a_resume_reopens_the_panels_at_once_and_resets_the_sources(tmp_path: Path) -> None:
     rig = Rig(tmp_path, ("minimal",))
     rig.set(cpu_c=40)
     rig.run_for(1)
     rig.clock.asleep += 3600
     rig.tick()
     assert rig.panels[0].closes == 1 and rig.panels[0].opens == 2
-    assert rig.sampler.resets == [True]
+    assert rig.sampler.epoch == 1
+
+
+def test_a_panel_slow_to_come_back_after_a_resume_is_back_within_a_second(tmp_path: Path) -> None:
+    panel = Unplugged(1001, 1001.7)  # it takes 0.7 s to show up as a USB device again
+    rig = Rig(tmp_path, ("minimal",), [panel])
+    rig.set(cpu_c=40)
+    rig.run_for(1)
+    rig.clock.asleep += 3600
+    sent = len(panel.frames)
+    rig.run_for(2)
+    assert panel.opened[1:] == pytest.approx([1001, 1001.2, 1001.6, 1002.4], abs=0.11)
+    assert panel.frames[sent][0] == pytest.approx(1002.4, abs=0.11)
+
+
+def test_a_panel_unplugged_mid_run_is_back_soon_after_it_is_plugged_in(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("psu", "crown"), [Unplugged(1010, 1011), Panel()])
+    rig.set(cpu_c=40, psu_w=300, working=2)  # psu animates: a frame every tick
+    rig.run_for(15)
+    back = [t for t, _ in rig.panels[0].frames if t >= 1010]
+    # Tries at 10.2 and 10.6 s still find it gone; each of the 3 tries can lag a tick (1/30 s) on the rig's clock
+    assert back and back[0] == pytest.approx(1011.4, abs=0.15)
+    assert [line for line in rig.lines if line.startswith("0 panel")] == [
+        "0 panel: working, info fake",
+        f"0 panel: [Errno {errno.ENODEV}] No such device",
+        "0 panel: no SL V3 LCD with serial 1",
+        "0 panel: working, info fake",
+    ]
+    assert [t for t, _ in rig.panels[1].frames] == pytest.approx([1000], abs=0.11)  # still: nothing to send again
 
 
 def test_a_bad_layout_file_keeps_the_designs(tmp_path: Path) -> None:
