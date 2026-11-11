@@ -6,8 +6,11 @@ import ctypes
 import errno
 import functools
 import io
+import logging
+import re
 from pathlib import Path
 
+import numpy as np
 import pytest
 from cryptography.hazmat.decrepit.ciphers.algorithms import TripleDES
 from cryptography.hazmat.primitives.ciphers import Cipher, modes
@@ -78,6 +81,12 @@ def test_jpeg_fits_one_transfer_and_turns() -> None:
         assert turned.convert("L").getpixel((399, 399)) == pytest.approx(255, abs=60)  # top left went to bottom right
 
 
+def test_a_busy_picture_still_fits_one_frame() -> None:
+    noise = Image.fromarray(np.random.default_rng(0).integers(0, 256, (400, 400, 3), np.uint8))
+    data = slv3.jpeg(noise, 0)  # over 140 KB at quality 55 with full-resolution colour
+    assert len(data) <= slv3.PACKET - slv3.HEADER
+
+
 class Usb:
     """A panel that acknowledges every command and answers the version query."""
 
@@ -137,6 +146,31 @@ def test_a_frames_acknowledgement_is_read_before_the_next_command(usb: Usb) -> N
     assert len(usb.replies) == reads  # not waited for
     panel.show(Image.new("RGB", (400, 400)))
     assert len(usb.replies) == reads + 1
+
+
+def test_debug_logs_each_command_with_its_length_and_its_acknowledgement(
+    usb: Usb, caplog: pytest.LogCaptureFixture
+) -> None:
+    panel, image = slv3.Slv3("abc"), Image.new("RGB", (400, 400))
+    with caplog.at_level(logging.DEBUG, logger="pixdial"):
+        panel.open()
+        panel.show(image)
+        panel.off()
+    jpeg = len(slv3.jpeg(image, 0))
+    assert [re.sub(r"\d+\.\d ms", "N ms", line) for line in caplog.messages] == [
+        "revision: 512 bytes, written in N ms",
+        "revision ack, 8 bytes, after N ms",
+        "frame rate: 512 bytes, written in N ms",
+        "frame rate ack, 8 bytes, after N ms",
+        "version: 512 bytes, written in N ms",
+        "version ack, 27 bytes, after N ms",
+        "brightness: 512 bytes, written in N ms",
+        "brightness ack, 8 bytes, after N ms",
+        f"frame: 102400 bytes ({jpeg} bytes of JPEG), written in N ms",
+        "frame ack, 8 bytes, after N ms",  # read before the next command
+        "brightness: 512 bytes, written in N ms",
+        "brightness ack, 8 bytes, after N ms",
+    ]
 
 
 def test_only_the_commands_of_normal_use_are_sent(usb: Usb) -> None:

@@ -2,9 +2,9 @@
 
 from .feed import Feed
 from .layout import ROTATE, Catalog, Layout
-from .report import Report
+from .report import Report, logs
 from .runner import Clock, Runner
 from .sampler import Sampler
 from .screen import Screen
 
-__all__ = ["ROTATE", "Catalog", "Clock", "Feed", "Layout", "Report", "Runner", "Sampler", "Screen"]
+__all__ = ["ROTATE", "Catalog", "Clock", "Feed", "Layout", "Report", "Runner", "Sampler", "Screen", "logs"]

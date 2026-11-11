@@ -74,6 +74,9 @@ Start with the runnable design in the [README](../README.md#build-a-design) or t
 | `trails` | A tuple of `TrailSpec` requests, available from `snapshot.trail(spec)` even after another design has been on screen. |
 | `reads`, `needs` | The reading keys it shows, and those it is mostly dashes without. While no source gives one of `needs`, the default layout and rotation leave it out. `doctor --share` lists the `reads` no source gives. |
 
+A design that raises in `__init__`, `update()` or a drawing pass is reported for its panel only. One that fails in
+`__init__` is skipped: the panel keeps the design it shows, and rotation moves on.
+
 Coordinates use the panel's 400 × 400 grid; the drawing kit applies the requested render scale.
 Designs should only render from snapshots, with no I/O. Use `Eased` for numbers that glide to their next value;
 round the still key with `rnd` to avoid redraws for invisible changes.
@@ -153,8 +156,10 @@ class Folder(Device):
 ```
 
 `show()` receives a 400 × 400 RGB Pillow image. Config options are passed to the constructor and checked by name.
-`open()` returns a short status string; an `OSError` causes a retry after 10 seconds.
+Each panel's `open()`, `show()`, `off()` and `close()` run in a thread of its own, so a slow device holds up no other.
+`open()` returns a short status string; an `OSError` causes a retry after a wait that doubles from 0.25 to 10 seconds.
 `show()` can raise `OSError` on disconnect, which closes the device so it can be reopened.
+Any other error from `show()` is reported for that panel and also closes the device; the other panels go on.
 Implement `off()` to blank physical hardware on normal shutdown and `close()` to release it.
 The file example has nothing to turn off.
 

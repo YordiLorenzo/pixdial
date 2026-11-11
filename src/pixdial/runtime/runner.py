@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import contextlib
+import logging
 import math
 import threading
 import time
 from collections.abc import Sequence
 
+from .. import NAME, __version__
 from .feed import Feed
 from .layout import Catalog, Layout
 from .report import Report
@@ -15,7 +16,10 @@ from .sampler import Sampler
 from .screen import Screen
 
 FAST, SLOW = 1 / 30, 1 / 10  # s between ticks while something animates, and else (easing numbers, the next reading)
+STOP_WAIT = 5  # s the panels get to go dark when it stops: a hung one's USB calls time out within about 4
 BOOTTIME = getattr(time, "CLOCK_BOOTTIME", time.CLOCK_MONOTONIC)  # Linux's counts time asleep
+
+log = logging.getLogger(__name__)
 
 
 class Clock:
@@ -54,16 +58,22 @@ class Runner:
 
     def run(self, stop: threading.Event) -> None:
         """Until stop is set; the panels go dark at the end."""
+        panels = ", ".join(f"{s.name} ({type(s.sender.device).__name__})" for s in self.screens)
+        sources = ", ".join(name for name, _ in self.sampler.sources)
+        log.info("%s %s: panels %s; sources %s", NAME, __version__, panels, sources or "none")
         self.sampler.start()
+        for screen in self.screens:
+            screen.sender.start()
         try:
             while not stop.is_set():
                 stop.wait(self.tick())
         finally:
             self.sampler.stop()
             for screen in self.screens:
-                with contextlib.suppress(OSError):  # a panel that went away is dark already
-                    screen.off()
-                screen.close()
+                screen.sender.stop()
+            deadline = time.monotonic() + STOP_WAIT
+            for screen in self.screens:
+                screen.sender.thread.join(max(0.0, deadline - time.monotonic()))
 
     def tick(self) -> float:
         """One frame for every panel that needs one; returns the seconds until the next tick."""
@@ -71,7 +81,7 @@ class Runner:
         was, self.asleep = self.asleep, self.clock.boottime() - now
         if self.asleep - was > 1:  # a resume: the panels may have come back as new USB devices
             for screen in self.screens:
-                screen.close()
+                screen.sender.reopen()
             self.sampler.resumed()
         self.follow_layout()
         for screen, spec in zip(self.screens, self.layout.showing(self.specs, self.clock.wall()), strict=True):

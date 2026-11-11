@@ -34,6 +34,23 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `pixdial service install`, `remove` and `status`: the bundled user unit with ExecStart pointed at the running pixdial.
 - A config error (exit status 2) stops the service once instead of restarting it every 10 seconds.
 - Text draws without libraqm: font features go to Pillow only when it has raqm, and `doctor` says whether it has.
+- `pixdial run --debug` logs each USB command with its length and its acknowledgement time, and a traceback for each
+  error.
+- `pixdial run --log-file PATH` writes the log to a file, with the time on each line.
+- `run` logs its panels and sources as it starts. Errors are logged as warnings, the rest as info.
+
+### Fixed
+
+- A frame too big for one SL V3 transfer is sent with 4:2:0 colour, instead of stopping the runtime.
+- A device error other than `OSError` in `show()` is reported for that panel only; the other panels go on.
+- A plugin design that fails in `__init__` is skipped for that panel, instead of stopping the runtime.
+- A list value on a trail key (`cpu_load`, `psu_w`) leaves a gap in the trail, instead of stopping the runtime.
+- Each panel sends its frames from a thread of its own, so a hung panel no longer slows the others to 1 frame/s.
+- After a failed send, a panel is opened again after a wait that doubles from 0.25 s to 10 s, not at once, and the
+  error is logged once, not once per frame.
+- A panel that is unplugged, or not back yet after a resume, is tried again with the same doubling wait, not every
+  10 s, so it is back within about a second of its return.
+- A source read under way as the machine went to sleep no longer brings back a reading from before the sleep.
 
 ## [0.1.0] - 2026-11-06
 

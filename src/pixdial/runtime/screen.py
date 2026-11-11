@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import time
 from collections.abc import Callable, Hashable
 
 import numpy as np
@@ -13,11 +14,11 @@ from ..designs import Design, Pixels, Still, with_text
 from ..devices import Device
 from ..readings import Snapshot
 from .report import Report
+from .sender import Sender
 
 STILL_FPS = 10  # times a second at most that a still part is drawn again
 RESEND = 30  # s: a frame goes out again this often even when nothing changed, so a panel that reset gets one
 FADE = 0.4  # s a new design takes to fade in over the last frame
-RETRY = 10  # s between tries to open a panel that couldn't be opened
 
 Frame8 = NDArray[np.uint8]
 Cached = tuple[Still, Frame8 | None]  # a still part, and it finished with its text when the moving part keeps clear
@@ -25,47 +26,63 @@ Cached = tuple[Still, Frame8 | None]  # a still part, and it finished with its t
 
 class Screen:
     """A design on a panel. The still part is drawn again only when its key changes; the moving part is painted over
-    a copy of it at the design's own rate."""
+    a copy of it at the design's own rate. The frames go to the panel's sender."""
 
-    design: Design  # set by use()
-    frame: Image.Image  # the last frame sent, faded in; set by the first tick that sends
+    design: Design | None = None  # set by use() once a design starts
+    frame: Image.Image  # the last frame drawn, faded in; set by the first tick that draws
 
-    def __init__(self, name: str, device: Device, report: Report) -> None:
-        self.name, self.device, self.report = name, device, report
-        self.open = False
-        self.spec: str | None = None
+    def __init__(self, name: str, device: Device, report: Report, clock: Callable[[], float] = time.monotonic) -> None:
+        self.name, self.report = name, report
+        self.sender = Sender(name, device, report, clock)
+        self.opened = 0  # the sender's opens when this screen last drew a whole frame
+        self.asked: str | None = None  # the design the layout asks for
+        self.spec: str | None = None  # the design shown
         self.still: Cached | None = None  # None: draw it on the next tick
         self.still_key: Hashable = None
         self.moving_key: Hashable = None
         self.shown: Frame8 | None = None  # the design's last frame
         self.fade_from: Frame8 | None = None
         self.fade_start: float | None = None
-        self.still_at = self.sent_at = self.retry_at = -math.inf
+        self.still_at = self.sent_at = -math.inf
 
     def use(self, spec: str, make: Callable[[str], Design]) -> None:
-        if spec != self.spec:
-            self.spec, self.design, self.still = spec, make(spec), None
-            self.fade_from, self.fade_start = self.shown, None  # fades from the last frame, starting with the next
+        if spec == self.asked:
+            return
+        self.asked = spec  # a design that fails as it starts is tried again when the layout or rotation comes back
+        try:
+            design = make(spec)
+        except Exception as error:  # a plugin design's bug: the panel keeps the design it shows
+            self.report(f"{self.name} design {spec}", error)
+            return
+        self.spec, self.design, self.still = spec, design, None
+        self.fade_from, self.fade_start = self.shown, None  # fades from the last frame, starting with the next
 
     def tick(self, r: Snapshot, now: float, dt: float) -> bool:
         """Returns whether it animates, so the loop knows how soon to come back."""
+        if self.design is None:  # its first design failed as it started: nothing to show yet
+            return False
+        sender = self.sender
         try:
             still_key, moving_key = self.design.update(r, now, dt)
-            if not self.open and not self.connect(now):
+            if not sender.open:  # nothing to draw for until it opens
                 return moving_key is not None
+            if sender.opens != self.opened:  # it opened again: a whole frame for it at once
+                self.opened, self.still = sender.opens, None
             fresh = self.render(still_key, moving_key, now)
         except Exception as error:  # a design's bug, or a reading it can't draw: the other panels go on
-            self.report(f"{self.name} design {self.spec}", repr(error))
+            self.report(f"{self.name} design {self.spec}", error)
             return False
         self.report(f"{self.name} design {self.spec}")
         if fresh or now - self.sent_at >= RESEND:
-            self.send(now)
+            sender.post(self.frame)
+            self.sent_at = now
         return moving_key is not None or self.fade_from is not None
 
     def render(self, still_key: Hashable, moving_key: Hashable, now: float) -> bool:
         """Whether there is a new frame: the still part drawn again if its key changed (and the rate allows), the
         moving part painted over it if either changed or a fade is under way."""
         design, still, redraw = self.design, self.still, False
+        assert design is not None  # tick() draws only with a design
         if still is None or (still_key != self.still_key and now - self.still_at >= 1 / STILL_FPS):
             still, redraw = draw(design), True
         if not (redraw or moving_key != self.moving_key or self.fade_from is not None):
@@ -76,27 +93,6 @@ class Screen:
             self.still, self.still_key, self.still_at = still, still_key, now
         self.shown, self.moving_key = shown, moving_key
         self.frame = Image.fromarray(self.blend(shown, now))
-        return True
-
-    def send(self, now: float) -> None:
-        try:
-            self.device.show(self.frame)
-            self.sent_at = now
-        except OSError as error:  # unplugged, re-enumerated after a sleep, or another program took it
-            self.report(f"{self.name} panel", error)
-            self.close()
-
-    def connect(self, now: float) -> bool:
-        if now < self.retry_at:
-            return False
-        try:
-            info = self.device.open()
-        except OSError as error:  # another program has it, or it is gone
-            self.retry_at = now + RETRY
-            self.report(f"{self.name} panel", error)
-            return False
-        self.open, self.still = True, None  # a fresh frame for it at once
-        self.report(f"{self.name} panel", info=info)
         return True
 
     def blend(self, shown: Frame8, now: float) -> Frame8:
@@ -110,16 +106,6 @@ class Screen:
             self.fade_from = None
             return shown
         return (self.fade_from * (1 - t) + shown * t).astype(np.uint8)
-
-    def close(self) -> None:
-        if self.open:
-            self.device.close()
-        self.open = False
-
-    def off(self) -> None:
-        """Dark when the program stops."""
-        if self.open:
-            self.device.off()
 
 
 def draw(design: Design) -> Cached:

@@ -14,6 +14,7 @@ from pixdial.readings import Reading
 from pixdial.runtime import Report, Sampler
 from pixdial.sources import Amdgpu, Command, Cpu, Hwmon, Nvml, Rapl, Source
 from pixdial.sources.amdgpu import GIB
+from tests import logged
 
 
 def chip(root: Path, n: int, name: str, files: dict[str, str]) -> None:
@@ -140,7 +141,7 @@ class Flaky(Source):
 def test_the_sampler_reports_a_failure_once_and_its_recovery() -> None:
     lines: list[str] = []
     flaky = Flaky()
-    sampler = Sampler([("flaky", flaky)], Report(lines.append), clock=lambda: 0.0)
+    sampler = Sampler([("flaky", flaky)], Report(logged(lines)), clock=lambda: 0.0)
     for _ in range(3):
         sampler.sample(0)
     assert lines == ["flaky: sensor gone", "flaky: working"]
@@ -164,7 +165,7 @@ class Constant(Source):
 
 def test_a_later_source_wins_a_key_two_report() -> None:
     sources: list[tuple[str, Source]] = [("first", Constant(1.0, 1.0)), ("second", Constant(2.0, 5.0))]
-    sampler = Sampler(sources, Report(lambda line: None), clock=lambda: 0.0)
+    sampler = Sampler(sources, Report(), clock=lambda: 0.0)
     sampler.sample(1)
     sampler.sample(0)  # the first source, read after the second
     assert sampler.fresh(0.0) == {"x": Reading(2.0)}
@@ -184,7 +185,7 @@ class Slow(Source):
 def test_a_slow_source_holds_up_no_other() -> None:
     release = threading.Event()
     sources: list[tuple[str, Source]] = [("slow", Slow(release)), ("fast", Constant(1.0, 0.01))]
-    sampler = Sampler(sources, Report(lambda line: None))
+    sampler = Sampler(sources, Report())
     sampler.start()
     try:
         deadline = time.monotonic() + 2
@@ -197,11 +198,10 @@ def test_a_slow_source_holds_up_no_other() -> None:
 
 
 def test_readings_from_before_a_sleep_are_dropped() -> None:
-    sampler = Sampler([("first", Constant(1.0, 1.0))], Report(lambda line: None), clock=lambda: 0.0)
+    sampler = Sampler([("first", Constant(1.0, 1.0))], Report(), clock=lambda: 0.0)
     sampler.sample(0)
     sampler.resumed()
     assert sampler.fresh(0.0) == {}
-    assert sampler.resets == [True]
 
 
 def card(drm: Path, n: int, driver: str, files: dict[str, str], hwmon: dict[str, str] | None = None) -> Path:
@@ -272,7 +272,7 @@ def test_amdgpu_is_silent_without_an_amd_gpu(tmp_path: Path) -> None:
     card(tmp_path / "drm", 0, "nvidia", {})
     lines: list[str] = []
     sources: list[tuple[str, Source]] = [("nvidia only", Amdgpu(str(tmp_path / "drm"))), ("no drm", Amdgpu("/nope"))]
-    sampler = Sampler(sources, Report(lines.append), clock=lambda: 0.0)
+    sampler = Sampler(sources, Report(logged(lines)), clock=lambda: 0.0)
     sampler.sample(0)
     sampler.sample(1)
     assert lines == []
@@ -287,3 +287,41 @@ def test_amdgpu_keeps_the_readings_it_can_read(tmp_path: Path) -> None:
         (device / f).write_text("")
     with pytest.raises(ValueError):
         Amdgpu(str(tmp_path / "drm")).read()
+
+
+class Asleep(Source):
+    """A source whose first read is under way as the machine sleeps; it hands back a reading from before."""
+
+    period = 0.01
+
+    def __init__(self) -> None:
+        self.reading, self.woke, self.again, self.done = (threading.Event() for _ in range(4))
+        self.resets = 0
+
+    def read(self) -> dict[str, Reading]:
+        if not self.reading.is_set():
+            self.reading.set()
+            self.woke.wait(5)
+            return {"x": Reading(1.0)}
+        self.again.set()
+        self.done.wait(5)
+        return {}
+
+    def reset(self) -> None:
+        self.resets += 1
+
+
+def test_a_reading_begun_before_a_sleep_is_dropped_and_the_source_reset() -> None:
+    source = Asleep()
+    sampler = Sampler([("asleep", source)], Report())
+    sampler.start()
+    try:
+        assert source.reading.wait(2)
+        sampler.resumed()
+        source.woke.set()
+        assert source.again.wait(2)  # the first read is over
+        assert sampler.fresh(time.monotonic()) == {}
+        assert source.resets == 1
+    finally:
+        sampler.stop()
+        source.done.set()
