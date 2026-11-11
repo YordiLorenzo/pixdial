@@ -112,8 +112,8 @@ def devices(args: argparse.Namespace) -> int:
     for kind, cls in plugins.available("devices", Device, DEVICES)[0].items():
         for panel in cls.discover():
             found += 1
-            access = "ok" if panel.access else f"no access (`{NAME} setup` gives it)"
-            access = f"in use by {panel.held}" if panel.held and panel.access else access
+            access = f"in use by {panel.held}" if panel.held else "ok"
+            access = access if panel.access else f"no access (`{NAME} setup` gives it)"
             where = f"panel {panels[panel.id]!r}" if panel.id in panels else "not in the config"
             print(f"{kind}  {panel.id}  {panel.where}  {access}  {where}")
     for product, port in doctor.others():

@@ -121,7 +121,7 @@ def layout(config: cfg.Config) -> Iterator[Check]:
     try:
         catalog = cfg.catalog(config)
         specs = cfg.layout(config, catalog).load()
-        left_out = {} if config.rotation and config.layout else cfg.skipped(config, catalog)
+        left_out = {} if config.rotation and config.layout else cfg.skipped(catalog, cfg.sources(config))
     except (cfg.ConfigError, ValueError) as error:
         yield Check("layout", FAIL, str(error))
         return

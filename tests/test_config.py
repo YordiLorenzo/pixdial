@@ -8,9 +8,9 @@ import pytest
 
 from pixdial import config as cfg
 from pixdial.devices import Png, Slv3
-from pixdial.readings import Meta
+from pixdial.readings import Meta, Reading
 from pixdial.runtime import Report
-from pixdial.sources import Cpu, Hwmon, Nvml
+from pixdial.sources import Cpu, Hwmon, Nvml, Source
 
 GOOD = """
 theme = "ember"
@@ -98,7 +98,7 @@ def test_the_default_layout_and_rotation_skip_designs_no_source_feeds(tmp_path: 
     plan = cfg.layout(config, cfg.catalog(config))
     assert plan.default == ("crown", "gpu", "twin")
     assert not set(NEED_A_PSU_OR_AGENTS) & set(plan.rotation)
-    assert cfg.skipped(config, cfg.catalog(config)) == {
+    assert cfg.skipped(cfg.catalog(config), cfg.sources(config)) == {
         "psu": ["psu_w"],
         "pins": ["pins"],
         "flow": ["psu_w"],
@@ -125,7 +125,7 @@ def test_a_source_that_says_what_it_gives_feeds_its_designs(tmp_path: Path) -> N
 
 def test_a_json_command_may_give_anything_so_nothing_is_skipped(tmp_path: Path) -> None:
     config = load(tmp_path, THREE + '[[sources]]\ntype = "command"\nrun = ["agents", "--json"]\n')
-    assert cfg.skipped(config, cfg.catalog(config)) == {}
+    assert cfg.skipped(cfg.catalog(config), cfg.sources(config)) == {}
     assert cfg.layout(config, cfg.catalog(config)).default == ("crown", "gpu", "psu")
 
 
@@ -168,6 +168,24 @@ def test_no_file_at_the_default_place_means_the_defaults(tmp_path: Path, monkeyp
 )
 def test_errors_say_where(tmp_path: Path, text: str, message: str) -> None:
     assert message in error(tmp_path, text)
+
+
+class Counted(Source):
+    """A plugin source that may hold a device from the moment it is made."""
+
+    made = 0
+
+    def __init__(self) -> None:
+        Counted.made += 1
+
+    def read(self) -> dict[str, Reading]:
+        return {}
+
+
+def test_run_makes_each_source_once(tmp_path: Path) -> None:
+    config = load(tmp_path, f'{THREE}[[sources]]\ntype = "{__name__}:Counted"\n')
+    cfg.runner(config, Report())
+    assert Counted.made == 1
 
 
 def test_run_needs_panels(tmp_path: Path) -> None:

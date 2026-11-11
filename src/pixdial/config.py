@@ -5,7 +5,6 @@ A ConfigError's message says where in the file; the caller adds which file.
 
 from __future__ import annotations
 
-import dataclasses
 import inspect
 import itertools
 import json
@@ -13,7 +12,7 @@ import os
 import tomllib
 from collections import Counter
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -181,10 +180,11 @@ def catalog(config: Config) -> Catalog:
     return Catalog(designs, THEMES, config.theme)
 
 
-def layout(config: Config, catalog: Catalog) -> Layout:
+def layout(config: Config, catalog: Catalog, built: Sequence[tuple[str, Source]] | None = None) -> Layout:
+    """The layout; built: the config's sources, where they are built already (a plugin's may hold a device)."""
     names = list(catalog.designs)
     if not (config.rotation and config.layout):
-        left_out = skipped(config, catalog)
+        left_out = skipped(catalog, sources(config) if built is None else built)
         names = [name for name in names if name not in left_out]
     rotation = config.rotation or tuple(names)
     for name in rotation:
@@ -197,10 +197,10 @@ def layout(config: Config, catalog: Catalog) -> Layout:
         raise ConfigError(f"layout: {error}") from None
 
 
-def skipped(config: Config, catalog: Catalog) -> dict[str, list[str]]:
+def skipped(catalog: Catalog, built: Sequence[tuple[str, Source]]) -> dict[str, list[str]]:
     """The designs the default rotation and layout leave out, each with what it needs that no source gives."""
     given: set[str] = set()
-    for _, source in sources(config):
+    for _, source in built:
         keys = source.gives()
         if keys is None:  # it may give any reading
             return {}
@@ -212,7 +212,7 @@ def skipped(config: Config, catalog: Catalog) -> dict[str, list[str]]:
 def written(config: Config, serials: Sequence[str]) -> str:
     """A config file for these SL V3 panels, with the layout they get by default with the config's sources."""
     panels = tuple(Entry("slv3", {"serial": serial}, str(i + 1)) for i, serial in enumerate(serials))
-    specs = layout(dataclasses.replace(config, panels=panels, layout=()), catalog(config)).default
+    specs = layout(replace(config, panels=panels, layout=()), catalog(config)).default
     lines = [f"layout = [{', '.join(map(json.dumps, specs))}]"]
     for serial in serials:
         lines += ["", "[[panels]]", f"serial = {json.dumps(serial)}"]
@@ -250,7 +250,8 @@ def runner(config: Config, report: Report) -> Runner:
     if not config.panels:
         raise ConfigError(f"no [[panels]] (`{NAME} devices` lists the panels attached)")
     found = catalog(config)
-    plan = layout(config, found)
+    built = sources(config)
+    plan = layout(config, found, built)
     screens = [Screen(name, device, report) for name, device in devices(config)]
     feed = Feed(config.readings, {spec for cls in found.designs.values() for spec in cls.trails})
-    return Runner(screens, Sampler(sources(config), report), feed, found, plan, report)
+    return Runner(screens, Sampler(built, report), feed, found, plan, report)
