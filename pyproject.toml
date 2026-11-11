@@ -1,6 +1,6 @@
 [project]
 name = "pixdial"
-version = "0.1.1"
+version = "0.1.2"
 description = "Live hardware readings on Lian Li UNI FAN SL Wireless LCD (SL V3) fan screens"
 dynamic = ["readme"]
 requires-python = ">=3.12"
