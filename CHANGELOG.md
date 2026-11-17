@@ -8,6 +8,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - `setup --rapl` opts in to CPU power readings for the panel group, with a dry run and a doctor hint about access.
+- Install instructions for Bazzite, Fedora Atomic and SteamOS, with uv and host udev rules; all three are untested.
 
 ## [0.1.2] - 2026-11-11
 

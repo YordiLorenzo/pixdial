@@ -26,6 +26,9 @@ You need Linux, Python 3.12 or newer, [uv](https://docs.astral.sh/uv/getting-sta
 [supported panel](#supported-hardware). For a preview without hardware, install pixdial and run
 `pixdial render crown --state busy --out preview`.
 
+For Bazzite, Fedora Atomic or SteamOS, see the [installation guide](docs/atomic-desktops.md). These distributions
+have not been tested with pixdial.
+
 1. **Install.**
 
    ```sh
