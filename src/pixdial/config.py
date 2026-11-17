@@ -22,7 +22,7 @@ from .designs import THEMES, Design
 from .devices import BUILTIN as DEVICES
 from .devices import Device
 from .readings import Meta
-from .runtime import Catalog, Feed, Layout, Report, Runner, Sampler, Screen
+from .runtime import MAX_FPS, Catalog, Feed, Layout, Report, Runner, Sampler, Screen
 from .sources import BUILTIN as SOURCES
 from .sources import Source
 
@@ -39,6 +39,7 @@ class Entry:
     kind: str
     options: Mapping[str, Any]
     name: str  # in log lines: the panel's name, or the source's kind (numbered when it comes twice)
+    max_fps: float = MAX_FPS  # a panel's frames a second at most
 
 
 DEFAULT_SOURCES = (
@@ -108,11 +109,16 @@ def parse(data: Mapping[str, Any], path: Path) -> Config:
 
 
 def panel(table: Any, i: int) -> Entry:
-    """A panel: its device (slv3 unless it says), its name (its number unless it says), the device's options."""
+    """A panel: its device (slv3 unless it says), its name (its number unless it says), its frames a second at most,
+    the device's options."""
     where = f"panels[{i}]"
     e = entry(table, where, "device", "slv3")
     name = get(e.options, "name", str, str(i + 1), where)
-    return Entry(e.kind, {k: v for k, v in e.options.items() if k != "name"}, name)
+    fps = get(e.options, "max_fps", (int, float), MAX_FPS, where)
+    if not 0 < fps <= MAX_FPS:
+        raise ConfigError(f"{where}.max_fps: must be above 0 and at most {MAX_FPS}, not {fps}")
+    options = {k: v for k, v in e.options.items() if k not in ("name", "max_fps")}
+    return Entry(e.kind, options, name, float(fps))
 
 
 def entry(table: Any, where: str, kind_key: str, default: str | None = None) -> Entry:
@@ -261,6 +267,9 @@ def runner(config: Config, report: Report) -> Runner:
     found = catalog(config)
     built = sources(config)
     plan = layout(config, found, built)
-    screens = [Screen(name, device, report) for name, device in devices(config)]
+    screens = [
+        Screen(name, device, report, max_fps=e.max_fps)
+        for (name, device), e in zip(devices(config), config.panels, strict=True)
+    ]
     feed = Feed(config.readings, {spec for cls in found.designs.values() for spec in cls.trails})
     return Runner(screens, Sampler(built, report), feed, found, plan, report)

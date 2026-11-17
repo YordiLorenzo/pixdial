@@ -5,6 +5,12 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Each panel ticks at its own design's rate, on a fixed grid of deadlines, so an animation keeps its frame rate when
+  the machine is busy and a late frame is skipped, not sent in a burst. A panel's `max_fps` key caps its frames a
+  second, for less CPU.
+
 ## [0.1.2] - 2026-11-11
 
 ### Fixed

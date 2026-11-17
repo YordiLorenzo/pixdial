@@ -16,7 +16,9 @@ from ..readings import Snapshot
 from .report import Report
 from .sender import Sender
 
-STILL_FPS = 10  # times a second at most that a still part is drawn again
+MAX_FPS = 30  # frames a second at most: a moving part, a fade
+STILL_FPS = 10  # times a second at most that a still part is drawn again: ticks this often while nothing moves
+EARLY = 0.001  # s: a tick this close before a deadline counts as on time (a wait can end a little early)
 RESEND = 30  # s: a frame goes out again this often even when nothing changed, so a panel that reset gets one
 FADE = 0.4  # s a new design takes to fade in over the last frame
 
@@ -26,13 +28,21 @@ Cached = tuple[Still, Frame8 | None]  # a still part, and it finished with its t
 
 class Screen:
     """A design on a panel. The still part is drawn again only when its key changes; the moving part is painted over
-    a copy of it at the design's own rate. The frames go to the panel's sender."""
+    a copy of it at the design's own rate. The frames go to the panel's sender. Each tick sets when the next is due,
+    at the rate the design needs now and at most max_fps a second."""
 
     design: Design | None = None  # set by use() once a design starts
     frame: Image.Image  # the last frame drawn, faded in; set by the first tick that draws
 
-    def __init__(self, name: str, device: Device, report: Report, clock: Callable[[], float] = time.monotonic) -> None:
-        self.name, self.report = name, report
+    def __init__(
+        self,
+        name: str,
+        device: Device,
+        report: Report,
+        clock: Callable[[], float] = time.monotonic,
+        max_fps: float = MAX_FPS,
+    ) -> None:
+        self.name, self.report, self.max_fps = name, report, max_fps
         self.sender = Sender(name, device, report, clock)
         self.opened = 0  # the sender's opens when this screen last drew a whole frame
         self.asked: str | None = None  # the design the layout asks for
@@ -44,6 +54,8 @@ class Screen:
         self.fade_from: Frame8 | None = None
         self.fade_start: float | None = None
         self.still_at = self.sent_at = -math.inf
+        self.due = -math.inf  # when it next ticks
+        self.ticked: float | None = None  # when it last ticked
 
     def use(self, spec: str, make: Callable[[str], Design]) -> None:
         if spec == self.asked:
@@ -56,27 +68,46 @@ class Screen:
             return
         self.spec, self.design, self.still = spec, design, None
         self.fade_from, self.fade_start = self.shown, None  # fades from the last frame, starting with the next
+        self.due = -math.inf  # at once
 
-    def tick(self, r: Snapshot, now: float, dt: float) -> bool:
-        """Returns whether it animates, so the loop knows how soon to come back."""
+    def tick(self, r: Snapshot, now: float) -> None:
+        """Draws and posts what changed, and sets when it is next due. The deadlines lie on a grid at the rate, so a
+        late tick takes the next one and the frames after it keep their pace: a missed frame is skipped, not caught
+        up."""
+        dt, self.ticked = 0.0 if self.ticked is None else now - self.ticked, now
+        fps = min(self.step(r, now, dt), self.max_fps)
+        self.due = after(now + EARLY, fps)
+
+    def step(self, r: Snapshot, now: float, dt: float) -> float:
+        """Returns the frames a second it needs now."""
         if self.design is None:  # its first design failed as it started: nothing to show yet
-            return False
+            return STILL_FPS
         sender = self.sender
         try:
             still_key, moving_key = self.design.update(r, now, dt)
             if not sender.open:  # nothing to draw for until it opens
-                return moving_key is not None
+                return self.rate(moving_key)
             if sender.opens != self.opened:  # it opened again: a whole frame for it at once
                 self.opened, self.still = sender.opens, None
             fresh = self.render(still_key, moving_key, now)
         except Exception as error:  # a design's bug, or a reading it can't draw: the other panels go on
             self.report(f"{self.name} design {self.spec}", error)
-            return False
+            return STILL_FPS
         self.report(f"{self.name} design {self.spec}")
         if fresh or now - self.sent_at >= RESEND:
             sender.post(self.frame)
             self.sent_at = now
-        return moving_key is not None or self.fade_from is not None
+        return self.rate(moving_key)
+
+    def rate(self, moving_key: Hashable) -> float:
+        """MAX_FPS while a new design fades in; the design's fps while it moves (MAX_FPS for one that gives none);
+        STILL_FPS for a still part that may change with the readings."""
+        assert self.design is not None  # step() asks only with a design
+        if self.fade_from is not None:
+            return MAX_FPS
+        if moving_key is None:
+            return STILL_FPS
+        return min(max(self.design.fps or MAX_FPS, STILL_FPS), MAX_FPS)
 
     def render(self, still_key: Hashable, moving_key: Hashable, now: float) -> bool:
         """Whether there is a new frame: the still part drawn again if its key changed (and the rate allows), the
@@ -106,6 +137,12 @@ class Screen:
             self.fade_from = None
             return shown
         return (self.fade_from * (1 - t) + shown * t).astype(np.uint8)
+
+
+def after(t: float, fps: float) -> float:
+    """The first tick after t at fps. Ticks lie halfway between the moments a design's moving key changes
+    (int(now * fps)), so a tick a little early or late still gets the next key."""
+    return (math.floor(t * fps + 0.5) + 0.5) / fps
 
 
 def draw(design: Design) -> Cached:
