@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+import shlex
 import signal
 import threading
 from collections.abc import Callable, Iterator
@@ -13,6 +14,7 @@ import pytest
 from PIL import Image, ImageFont
 
 from pixdial import __version__
+from pixdial import config as cfg
 from pixdial.cli import main
 from pixdial.devices import Found, Slv3
 
@@ -49,6 +51,43 @@ def test_a_config_error_names_the_file(tmp_path: Path, capsys: pytest.CaptureFix
     path.write_text("theme = 1\n")
     assert main(["--config", str(path), "list"]) == 2
     assert capsys.readouterr().err == f"pixdial: {path}: theme: must be text, not 1\n"
+
+
+@pytest.mark.parametrize("saved", ["gone clock", "clock:gone clock", "clock"])
+@pytest.mark.parametrize("specs", [[], ["missing"]])
+def test_show_explains_a_stale_layout(
+    config: Path, capsys: pytest.CaptureFixture[str], saved: str, specs: list[str]
+) -> None:
+    config = config.rename(config.with_name("config with spaces.toml"))
+    path = cfg.state_path()
+    path.parent.mkdir(parents=True)
+    path.write_text(saved)
+    assert main(["--config", str(config), "show", *specs]) == 2
+    out, error = capsys.readouterr()
+    assert not out
+    assert len(error.splitlines()) == 1
+    assert str(path) in error and "Traceback" not in error
+    recovery = shlex.join(["pixdial", "--config", str(config), "show", "rotate"])
+    assert recovery in error
+    assert path.read_text() == saved
+    assert main(shlex.split(recovery)[1:]) == 0
+    assert capsys.readouterr().out == "rotate\n"
+
+
+@pytest.mark.parametrize("code", ["def broken(:\n", "raise RuntimeError('bad\\nplugin')\n"])
+def test_plugin_import_errors_name_the_plugin_and_how_to_fix_it(
+    config: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], code: str
+) -> None:
+    (config.parent / "broken_plugin.py").write_text(code)
+    monkeypatch.syspath_prepend(str(config.parent))
+    config.write_text(config.read_text().replace("sources = []", '[[sources]]\ntype = "broken_plugin:Source"'))
+    assert main(["--config", str(config), "show"]) == 2
+    out, error = capsys.readouterr()
+    assert not out
+    assert len(error.splitlines()) == 1
+    assert str(config) in error and "broken_plugin:Source" in error
+    assert "fix the plugin or remove it from the config" in error
+    assert "Traceback" not in error
 
 
 def test_render_writes_pngs(config: Path, tmp_path: Path) -> None:

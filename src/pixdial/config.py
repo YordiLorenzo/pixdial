@@ -47,6 +47,7 @@ DEFAULT_SOURCES = (
     Entry("amdgpu", {}, "amdgpu"),  # before nvml, so an NVIDIA card's readings win over a Ryzen's built-in GPU
     Entry("nvml", {}, "nvml"),
     Entry("hwmon", {"readings": {"cpu_c": ["k10temp/Tctl", "coretemp/Package id 0"]}}, "hwmon"),
+    Entry("corsairpsu", {}, "corsairpsu"),
 )
 
 

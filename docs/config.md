@@ -50,6 +50,8 @@ pixdial show
 `layout` in the config. It lives at `$XDG_STATE_HOME/pixdial/layout`, defaulting to
 `~/.local/state/pixdial/layout`. Different `--config` files share this state unless you also set a different
 `XDG_STATE_HOME`. To select a new fixed layout, use `show` with one design per panel.
+If a saved selection names a removed design or theme, or has the wrong number of panels, `show` names the state
+file and prints a command to replace it with `show rotate`. A valid new selection replaces stale state directly.
 
 ## USB permissions
 
@@ -99,6 +101,9 @@ type = "nvml"
 [[sources]]
 type = "hwmon"
 readings = { cpu_c = ["k10temp/Tctl", "coretemp/Package id 0"] }
+
+[[sources]]
+type = "corsairpsu"
 ```
 
 Defining any `[[sources]]` **replaces the entire default list**. Include the defaults you want to keep.
@@ -111,11 +116,37 @@ A top-level `sources = []` disables sampling.
 | `amdgpu` | Experimental. AMD GPU power, temperature, utilisation and VRAM from the amdgpu driver's files, every second | `root`: default `/sys/class/drm` |
 | `nvml` | NVIDIA GPU power, temperature and utilisation, every second | `index`: default 0; needs `libnvidia-ml.so.1` from the NVIDIA driver |
 | `hwmon` | Linux hardware sensors, every second | `readings`: map of reading keys to `chip/sensor`; `root`: default `/sys/class/hwmon` |
+| `corsairpsu` | Corsair HXi/RMi PSU DC output, temperature and fan speed, every second | `root`: default `/sys/class/hwmon` |
 | `command` | Numbers or JSON printed by a program | `run`: argument list; `key`: optional scalar reading name; `period`: seconds, default 5 |
 
 hwmon accepts a sensor label or file stem, such as `k10temp/Tctl` or `corsairpsu/power1`.
+Run `pixdial sensors` to list every hwmon chip and sensor, including voltages, with its current value and limit.
+It only reads sysfs and does not load your config or open panels. An unreadable sensor says `unavailable`;
+a missing limit says `not reported`. With no hwmon chips it exits with status 1.
+
+Each sensor includes a ready-to-copy `[[sources]]` table:
+
+```toml
+# corsairpsu/power1: 312 W; limit not reported
+[[sources]]
+type = "hwmon"
+readings = {"corsairpsu_power1" = "corsairpsu/power1"}
+```
+
+Rename the reading key on the left to one your design uses, such as `psu_w`. Keep the default sources you need,
+since any `[[sources]]` replaces the default list. The command uses file stems so duplicate labels stay distinct;
+average readings use their full file name, such as `amdgpu/power1_average`.
+If several chips share a name, a source reads the highest value from their matching sensors.
+
 A list of sensors reports the highest available value and the lowest reported critical limit (or maximum when
-there is no critical limit). Configure the names your Linux drivers expose; there is no automatic PSU mapping.
+there is no critical limit).
+
+The default `corsairpsu` source maps `psu_w` to `power1`, `psu_c` to the higher of `temp1` and `temp2`, and
+`psu_fan` to `fan1`. Temperature uses the lower critical limit the sensors report. These are the sensors exposed
+by the Linux [Corsair PSU driver](https://docs.kernel.org/hwmon/corsair-psu.html) for HXi and RMi power supplies.
+Without a `corsairpsu` chip it gives no readings and logs nothing, so PSU designs stay out of the default layout
+and rotation. The source finds chips that appear after startup; designs are selected when `run` starts.
+Other PSUs need an explicit `hwmon` mapping. Defining `[[sources]]` still replaces all defaults.
 
 The `amdgpu` source is experimental: it is tested on copies of the driver's files, not yet on a Radeon card.
 It gives `gpu_c` (the edge temperature, limit: the card's critical temperature), `gpu_w` (`power1_average`, or
@@ -190,7 +221,7 @@ These are the keys the built-in designs use. Rows marked as configured data need
 | `cpu_load`, `threads` | CPU busy percentage, overall and per thread | 0 to 100% |
 | `cpu_c`, `cpu_w` | CPU temperature and package power | Temperature: 100 °C limit |
 | `gpu_w`, `gpu_c`, `gpu_use` | GPU board power, temperature, utilisation | 450 W; 90 °C; 0 to 100% |
-| `psu_w`, `psu_c`, `psu_fan` | PSU DC output, temperature and fan speed; configured data | 1,000 W; 70 °C |
+| `psu_w`, `psu_c`, `psu_fan` | PSU DC output, temperature and fan speed; automatic for `corsairpsu`, configured for other PSUs | 1,000 W; 70 °C |
 | `pins`, `pin_total`, `pin_balance` | Per-pin current, total current, minimum/maximum balance ratio; configured data | 9.5 A per pin, warning at 95% of that |
 | `quota`, `working`, `waiting` | Agent quota left (%), working sessions, waiting flag; configured data | Quota: 0 to 100% |
 
