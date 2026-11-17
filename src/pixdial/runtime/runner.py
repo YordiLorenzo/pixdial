@@ -88,7 +88,9 @@ class Runner:
         for screen in self.screens:
             if screen.due <= now + EARLY:
                 screen.tick(snapshot, now)
-        return max(0.0, min(screen.due for screen in self.screens) - self.clock.monotonic())
+        # Also wake at the shortest trail's period, so a panel's low max_fps does not thin out the history
+        due = min(min(screen.due for screen in self.screens), now + self.feed.period)
+        return max(0.0, due - self.clock.monotonic())
 
     def follow_layout(self) -> None:
         try:

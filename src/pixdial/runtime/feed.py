@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable, Mapping
 
 import numpy as np
@@ -16,6 +17,7 @@ class Feed:
     def __init__(self, meta: Mapping[str, Meta], trails: Iterable[TrailSpec]) -> None:
         self.meta = meta
         self.trails = {spec: Trail(spec) for spec in trails}
+        self.period = min((spec.period for spec in self.trails), default=math.inf)  # the shortest trail's
 
     def snapshot(self, readings: Mapping[str, Reading], now: float, wall: float) -> Snapshot:
         snapshot = Snapshot(readings, wall, self.meta, self.trails)

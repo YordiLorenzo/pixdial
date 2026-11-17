@@ -14,6 +14,7 @@ import pytest
 from PIL import Image
 
 from pixdial.designs import BUILTIN, THEMES, Design, Eased, Still, Theme
+from pixdial.designs.power import History
 from pixdial.devices import Device
 from pixdial.readings import Reading, Value
 from pixdial.runtime import Catalog, Feed, Layout, Report, Runner, Sampler, Screen
@@ -218,6 +219,14 @@ def test_a_panel_s_max_fps_caps_its_frames(tmp_path: Path) -> None:
     delays = rig.run_for(2)
     assert len(rig.sent(0, start)) == pytest.approx(24, abs=1)
     assert min(delays) == pytest.approx(1 / 12)
+
+
+def test_a_low_max_fps_keeps_each_trail_at_its_period(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("history",), max_fps=0.5)
+    rig.set(psu_w=300)
+    rig.run_for(20)
+    trail = rig.runner.feed.trails[History.WATTS]
+    assert len(trail.t) == pytest.approx(20, abs=1)  # a sample a second, not one per frame every 2 s
 
 
 def test_the_still_part_is_drawn_at_most_10_times_a_second(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
