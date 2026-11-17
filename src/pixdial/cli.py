@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import shlex
 import signal
 import subprocess
@@ -20,7 +21,7 @@ from .devices import Device, slv3
 from .gallery import Demo, gallery
 from .runtime import ROTATE, Report, logs
 from .sources import BUILTIN as SOURCES
-from .sources import Source
+from .sources import Source, hwmon
 
 OK, SHORT, USAGE = 0, 1, 2
 
@@ -54,6 +55,9 @@ def parser() -> argparse.ArgumentParser:
 
     devices_ = sub.add_parser("devices", help="the panels attached now")
     devices_.set_defaults(command=devices)
+
+    sensors_ = sub.add_parser("sensors", help="list hwmon readings, limits and source config entries")
+    sensors_.set_defaults(command=sensors)
 
     render_ = sub.add_parser("render", help="designs as PNG files from demo readings, without hardware")
     render_.add_argument("specs", nargs="*", metavar="DESIGN", help="name or name:theme (default: every design)")
@@ -139,6 +143,32 @@ def devices(args: argparse.Namespace) -> int:
     if not found:
         print(f"no panels attached. {slv3.CABLE}", file=sys.stderr)
     return OK if found else SHORT
+
+
+def sensors(args: argparse.Namespace) -> int:
+    found = hwmon.scan(hwmon.HWMON)
+    if not found:
+        print(f"# no hwmon chips found in {hwmon.HWMON}")
+        return SHORT
+    print("# Rename reading keys to match your designs, such as cpu_c or psu_w.")
+    print("# Adding [[sources]] replaces the defaults; keep the default sources you need.")
+    for chip, entries in found:
+        if not entries:
+            print(f"\n# {chip}: no sensors")
+        for entry in entries:
+            label = ""
+            if entry.label != entry.name.removesuffix("_average"):
+                label = f" ({' '.join(entry.label.splitlines())})"
+            value, maximum = "unavailable", "not reported"
+            if entry.reading is not None:
+                r = entry.reading
+                value = f"{r.value:g} {r.unit}".rstrip()
+                if r.max is not None:
+                    maximum = f"{r.max:g} {r.unit}".rstrip()
+            print(f"\n# {chip}/{entry.name}{label}: {value}; limit {maximum}")
+            print('[[sources]]\ntype = "hwmon"')
+            print(f"readings = {{{json.dumps(chip + '_' + entry.name)} = {json.dumps(chip + '/' + entry.name)}}}")
+    return OK
 
 
 def render(args: argparse.Namespace) -> int:

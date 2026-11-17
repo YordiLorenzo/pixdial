@@ -116,6 +116,24 @@ A top-level `sources = []` disables sampling.
 | `command` | Numbers or JSON printed by a program | `run`: argument list; `key`: optional scalar reading name; `period`: seconds, default 5 |
 
 hwmon accepts a sensor label or file stem, such as `k10temp/Tctl` or `corsairpsu/power1`.
+Run `pixdial sensors` to list every hwmon chip and sensor, including voltages, with its current value and limit.
+It only reads sysfs and does not load your config or open panels. An unreadable sensor says `unavailable`;
+a missing limit says `not reported`. With no hwmon chips it exits with status 1.
+
+Each sensor includes a ready-to-copy `[[sources]]` table:
+
+```toml
+# corsairpsu/power1: 312 W; limit not reported
+[[sources]]
+type = "hwmon"
+readings = {"corsairpsu_power1" = "corsairpsu/power1"}
+```
+
+Rename the reading key on the left to one your design uses, such as `psu_w`. Keep the default sources you need,
+since any `[[sources]]` replaces the default list. The command uses file stems so duplicate labels stay distinct;
+average readings use their full file name, such as `amdgpu/power1_average`.
+If several chips share a name, a source reads the highest value from their matching sensors.
+
 A list of sensors reports the highest available value and the lowest reported critical limit (or maximum when
 there is no critical limit). Configure the names your Linux drivers expose; there is no automatic PSU mapping.
 

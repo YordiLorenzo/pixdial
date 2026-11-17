@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
 from ..readings import Reading
@@ -50,11 +51,7 @@ class Hwmon(Source):
     def reading(self, key: str) -> Reading:
         if key not in self.paths:
             self.paths[key] = self.find(key)
-        inputs = self.paths[key]
-        kind = inputs[0].name.removesuffix("_input").rstrip("0123456789")
-        unit, scale = UNITS.get(kind, ("", 1.0))
-        value = max(int(read(f)) for f in inputs) / scale
-        return Reading(value, unit, max=limit(inputs, scale))
+        return reading(self.paths[key])
 
     def find(self, key: str) -> list[Path]:
         chips: dict[str, list[Path]] = {}
@@ -66,37 +63,66 @@ class Hwmon(Source):
         return found
 
 
-def chips(root: Path = HWMON) -> list[tuple[str, dict[str, Reading]]]:
-    """Every chip's name with its temperatures, power, fans and currents now (not its voltages, which say little),
-    by label or file name: for a report of the sensors a config can name."""
+@dataclass(frozen=True)
+class Sensor:
+    name: str  # file stem for an input, full file name for an average
+    label: str
+    reading: Reading | None
+
+
+def scan(root: Path) -> list[tuple[str, list[Sensor]]]:
+    """Every chip and input, including voltages and unavailable sensors; read-only."""
     found = []
     for d in sorted(root.glob("hwmon*")):
-        sensors = {}
-        for f in sorted([*d.glob("*_input"), *d.glob("power*_average")]):
-            stem, _, kind = f.name.rpartition("_")
-            family = stem.rstrip("0123456789")
-            if family == "in":
-                continue
-            unit, scale = UNITS.get(family, ("", 1.0))
-            label = f.with_name(f"{stem}_label")
-            try:
-                name = read(label) if label.exists() else stem
-                sensors[name if kind == "input" else f"{name} {kind}"] = Reading(int(read(f)) / scale, unit)
-            except (OSError, ValueError):  # a sensor that is off now
-                continue
         try:
-            found.append((read(d / "name"), sensors))
+            name = read(d / "name")
         except OSError:
             continue
+        sensors = []
+        for f in sorted([*d.glob("*_input"), *d.glob("*_average")]):
+            stem, _, kind = f.name.rpartition("_")
+            try:
+                label = read(f.with_name(f"{stem}_label"))
+            except OSError:
+                label = stem
+            try:
+                value = reading([f])
+            except (OSError, ValueError):  # a sensor that is off now
+                value = None
+            sensors.append(Sensor(stem if kind == "input" else f.name, label, value))
+        found.append((name, sensors))
     return found
 
 
+def chips(root: Path = HWMON) -> list[tuple[str, dict[str, Reading]]]:
+    """Readable sensors by label for doctor reports, without voltages."""
+    return [
+        (
+            chip,
+            {
+                s.label + (" average" if s.name.endswith("_average") else ""): s.reading
+                for s in sensors
+                if s.reading is not None and s.reading.unit != "V"
+            },
+        )
+        for chip, sensors in scan(root)
+    ]
+
+
+def reading(inputs: Sequence[Path]) -> Reading:
+    kind = inputs[0].name.rpartition("_")[0].rstrip("0123456789")
+    unit, scale = UNITS.get(kind, ("", 1.0))
+    value = max(int(read(f)) for f in inputs) / scale
+    return Reading(value, unit, max=limit(inputs, scale))
+
+
 def sensor(chips: Mapping[str, list[Path]], chip: str, name: str) -> list[Path]:
-    """The input files of a sensor, by file name (temp1) or label (Tctl), on every chip of that name."""
+    """Inputs by stem or label, or averages by full file name, on every chip of that name."""
     found = []
     for d in chips.get(chip, []):
-        if (d / f"{name}_input").exists():
-            found.append(d / f"{name}_input")
+        direct = d / (name if name.endswith("_average") else f"{name}_input")
+        if direct.exists():
+            found.append(direct)
         found += [f.with_name(f.name.replace("_label", "_input")) for f in d.glob("*_label") if read(f) == name]
     return found
 
@@ -104,7 +130,14 @@ def sensor(chips: Mapping[str, list[Path]], chip: str, name: str) -> list[Path]:
 def limit(inputs: Sequence[Path], scale: float) -> float | None:
     """The lowest crit, else max, that the sensors report."""
     for kind in ("_crit", "_max"):
-        files = [f.with_name(f.name.replace("_input", kind)) for f in inputs]
+        files = []
+        for f in inputs:
+            average = f.with_name(f.name + kind)
+            files.append(
+                average
+                if f.name.endswith("_average") and average.exists()
+                else f.with_name(f.name.rpartition("_")[0] + kind)
+            )
         found = [int(read(f)) / scale for f in files if f.exists()]
         if found:
             return min(found)
