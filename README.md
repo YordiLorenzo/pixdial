@@ -128,6 +128,8 @@ To change the designs, give `pixdial show` one design per panel, such as `pixdia
 
 - **Python plugins.** Add a design, source or device without changing pixdial. The runtime handles sampling,
   layout changes and frame delivery.
+- **Your own picture.** Put a photo, or an animated GIF, APNG or WebP, under any design on a panel, or show it
+  alone. See [A picture under the design](docs/config.md#a-picture-under-the-design).
 - **Preview before connecting.** Render PNGs and an HTML gallery from demo readings, or use the PNG device to
   try a live layout without a physical panel.
 

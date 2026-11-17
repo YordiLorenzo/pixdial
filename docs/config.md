@@ -38,6 +38,7 @@ A panel's `name` identifies it in log messages and must be unique. It defaults t
 `max_fps` caps the frames a second that panel gets: above 0 and at most 30, default 30. A design draws at its own
 rate (10 to 30 frames a second), so a cap below that rate makes its motion less smooth and uses less CPU.
 A still design draws at most 10 times a second, or at `max_fps` when that is lower.
+`backdrop` puts a picture under its designs ([A picture under the design](#a-picture-under-the-design)).
 `device` defaults to `slv3`; the remaining keys go to that device's constructor.
 For `slv3`, `serial` is required, `turn` is 0, 90, 180 or 270 degrees clockwise (default 0), and `brightness`
 is 0 to 100 (default 100). Rotation happens on the host before JPEG encoding.
@@ -54,6 +55,31 @@ pixdial show
 `layout` in the config. It lives at `$XDG_STATE_HOME/pixdial/layout`, defaulting to
 `~/.local/state/pixdial/layout`. Different `--config` files share this state unless you also set a different
 `XDG_STATE_HOME`. To select a new fixed layout, use `show` with one design per panel.
+
+## A picture under the design
+
+A panel's `backdrop` puts your own picture under any design on that panel:
+
+```toml
+[[panels]]
+serial = "FIRST_PANEL_SERIAL"
+backdrop = "~/Pictures/panel.gif"
+```
+
+It takes a PNG, JPEG, GIF, APNG or WebP file. A relative path starts at the config file's folder. The picture fills
+the round panel and is cut to fit, and it is dimmed, most at the edge, so the readings and gauges stay readable.
+The design's glow lights the picture.
+
+An animated GIF, APNG or WebP plays at its own speed, at most at the design's frame rate and the panel's `max_fps`.
+pixdial decodes it once, when the panel first shows a design, and keeps at most 64 MB of its frames, about 133
+frames at 400 × 400. A longer animation plays its first frames and loops, and the log says how many it kept.
+A picture larger than 4096 × 4096 pixels is refused, and so is a file with over 100,000 frames.
+Panels that name the same file share one copy.
+
+`none` in a layout shows the picture alone, with no design over it: `pixdial show none crown`.
+
+A backdrop needs Pillow 13.0.0 or newer; with an older Pillow, `run` and `doctor` stop with that error.
+`doctor` also checks each backdrop file.
 
 ## USB permissions
 

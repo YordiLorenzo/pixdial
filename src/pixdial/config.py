@@ -23,6 +23,7 @@ from .devices import BUILTIN as DEVICES
 from .devices import Device
 from .readings import Meta
 from .runtime import MAX_FPS, Catalog, Feed, Layout, Report, Runner, Sampler, Screen
+from .runtime.backdrop import Backdrop, BackdropError
 from .sources import BUILTIN as SOURCES
 from .sources import Source
 
@@ -40,6 +41,7 @@ class Entry:
     options: Mapping[str, Any]
     name: str  # in log lines: the panel's name, or the source's kind (numbered when it comes twice)
     max_fps: float = MAX_FPS  # a panel's frames a second at most
+    backdrop: Path | None = None  # a panel's picture under its design
 
 
 DEFAULT_SOURCES = (
@@ -92,7 +94,7 @@ def parse(data: Mapping[str, Any], path: Path) -> Config:
     every = get(data, "rotate_every", (int, float), 60.0)
     if every <= 0:
         raise ConfigError(f"rotate_every: must be above 0, not {every}")
-    panels = [panel(table, i) for i, table in enumerate(get(data, "panels", list, []))]
+    panels = [panel(table, i, path.parent) for i, table in enumerate(get(data, "panels", list, []))]
     if dupes := [n for n, count in Counter(p.name for p in panels).items() if count > 1]:
         raise ConfigError(f"panels: two panels named {dupes[0]!r}")
     sources = [entry(table, f"sources[{i}]", "type") for i, table in enumerate(get(data, "sources", list, []))]
@@ -108,17 +110,18 @@ def parse(data: Mapping[str, Any], path: Path) -> Config:
     )
 
 
-def panel(table: Any, i: int) -> Entry:
+def panel(table: Any, i: int, folder: Path) -> Entry:
     """A panel: its device (slv3 unless it says), its name (its number unless it says), its frames a second at most,
-    the device's options."""
+    its backdrop (a path from the config's folder, or from home with ~), the device's options."""
     where = f"panels[{i}]"
     e = entry(table, where, "device", "slv3")
     name = get(e.options, "name", str, str(i + 1), where)
     fps = get(e.options, "max_fps", (int, float), MAX_FPS, where)
     if not 0 < fps <= MAX_FPS:
         raise ConfigError(f"{where}.max_fps: must be above 0 and at most {MAX_FPS}, not {fps}")
-    options = {k: v for k, v in e.options.items() if k not in ("name", "max_fps")}
-    return Entry(e.kind, options, name, float(fps))
+    backdrop = get(e.options, "backdrop", str, None, where)
+    options = {k: v for k, v in e.options.items() if k not in ("name", "max_fps", "backdrop")}
+    return Entry(e.kind, options, name, float(fps), None if backdrop is None else folder / Path(backdrop).expanduser())
 
 
 def entry(table: Any, where: str, kind_key: str, default: str | None = None) -> Entry:
@@ -238,6 +241,18 @@ def devices(config: Config) -> list[tuple[str, Device]]:
     return [(e.name, build("devices", Device, DEVICES, e, f"panels[{i}]")) for i, e in enumerate(config.panels)]
 
 
+def backdrops(config: Config) -> list[Backdrop | None]:
+    """Each panel's backdrop, checked; panels that name the same file share it, decoded once."""
+    opened: dict[Path, Backdrop] = {}
+    for i, e in enumerate(config.panels):
+        if e.backdrop is not None and e.backdrop not in opened:
+            try:
+                opened[e.backdrop] = Backdrop(e.backdrop)
+            except BackdropError as error:
+                raise ConfigError(f"panels[{i}].backdrop: {error}") from None
+    return [None if e.backdrop is None else opened[e.backdrop] for e in config.panels]
+
+
 def sources(config: Config) -> list[tuple[str, Source]]:
     return [(e.name, build("sources", Source, SOURCES, e, f"sources[{i}]")) for i, e in enumerate(config.sources)]
 
@@ -268,8 +283,8 @@ def runner(config: Config, report: Report) -> Runner:
     built = sources(config)
     plan = layout(config, found, built)
     screens = [
-        Screen(name, device, report, max_fps=e.max_fps)
-        for (name, device), e in zip(devices(config), config.panels, strict=True)
+        Screen(name, device, report, max_fps=e.max_fps, backdrop=backdrop)
+        for (name, device), e, backdrop in zip(devices(config), config.panels, backdrops(config), strict=True)
     ]
     feed = Feed(config.readings, {spec for cls in found.designs.values() for spec in cls.trails})
     return Runner(screens, Sampler(built, report), feed, found, plan, report)

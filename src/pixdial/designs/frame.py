@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Callable, Sequence
-from typing import Any
+from typing import Any, NamedTuple
 
 import numpy as np
 from numpy.typing import NDArray
@@ -18,7 +18,16 @@ DASH, DOT = "—", "  ·  "  # a missing reading; between two readings on a line
 Pixels = NDArray[Any]  # a float picture being drawn, or a finished 8-bit one (moving parts paint on either)
 Region = tuple[slice, slice]
 TextLayer = tuple[tuple[int, int, int], Region, NDArray[Any]]  # a colour, the box its text covers, the coverage there
-Still = tuple[F32, list[TextLayer]]
+
+
+class Still(NamedTuple):
+    """A design's still part: the picture over the theme's background without its text, the text layers, and how
+    much of the background shows at each pixel (0-1, None: unknown), so another backdrop can take its place: px +
+    (backdrop - background) * bare. The glow is light added over the background, so it lights a backdrop too."""
+
+    px: F32
+    text: list[TextLayer]
+    bare: F32 | None = None
 
 
 def tnum(font: ImageFont.FreeTypeFont) -> list[str] | None:
@@ -43,14 +52,19 @@ def add(px: Pixels, sl: Any, light: Pixels) -> None:
 
 def disc(px: Pixels, kit: Kit, x: float, y: float, r: float, colour: Sequence[float], alpha: float = 1.0) -> None:
     """An antialiased disc at (x, y) with radius r."""
+    box, a = disc_cover(kit, x, y, r)
+    region = px[box]
+    px[box] = region + (np.asarray(colour, np.float32) - region) * (a * alpha)
+
+
+def disc_cover(kit: Kit, x: float, y: float, r: float) -> tuple[Region, NDArray[Any]]:
+    """The box round a disc at (x, y) with radius r, and its antialiased coverage there."""
     s = kit.s
     cx, cy, rr = x * s, y * s, r * s
     x0, x1 = max(0, int(cx - rr - 2)), min(kit.size, int(cx + rr + 3))
     y0, y1 = max(0, int(cy - rr - 2)), min(kit.size, int(cy + rr + 3))
     yy, xx = np.mgrid[y0:y1, x0:x1]
-    a = np.clip(rr - np.hypot(xx - cx, yy - cy) + 0.5, 0, 1)[..., None] * alpha
-    region = px[y0:y1, x0:x1]
-    px[y0:y1, x0:x1] = region + (np.asarray(colour, np.float32) - region) * a
+    return np.s_[y0:y1, x0:x1], np.clip(rr - np.hypot(xx - cx, yy - cy) + 0.5, 0, 1)[..., None]
 
 
 def glow_disc(px: Pixels, kit: Kit, x: float, y: float, r: float, colour: Sequence[float], strength: float) -> None:
@@ -66,7 +80,8 @@ def glow_disc(px: Pixels, kit: Kit, x: float, y: float, r: float, colour: Sequen
 
 class Frame:
     """The still part of a frame being drawn. Each coloured shape also lights a layer that, blurred, becomes the glow
-    around it; the shapes go over the glow (on top it would wash their colour out to white), the text over both."""
+    around it; the shapes go over the glow (on top it would wash their colour out to white), the text over both.
+    Each shape also covers the background by its coverage (bare), so a backdrop can show where it shows."""
 
     def __init__(self, kit: Kit, theme: Theme, tint: Sequence[float] | None = None, strength: float = 0.0) -> None:
         self.kit, self.theme = kit, theme
@@ -74,6 +89,7 @@ class Frame:
         if tint is not None:
             self.px += kit.ambient * np.array(tint, np.float32) * strength
         self.light = np.zeros_like(self.px)
+        self.bare = np.ones((kit.size, kit.size, 1), np.float32)
         self.shapes: list[Callable[[F32], None]] = []
         self.text: dict[tuple[int, int, int], Image.Image] = {}  # colour -> its mask
 
@@ -82,6 +98,7 @@ class Frame:
             on = alpha > 0
             lit = colour[on] if np.ndim(colour) == 2 else np.asarray(colour, np.float32)  # type: ignore[call-overload]
             self.light.reshape(-1, 3)[ring.idx[on]] += lit * alpha[on, None] * glow
+        self.bare.reshape(-1)[ring.idx] *= 1 - alpha
         self.shapes.append(lambda px: paint(px, ring, alpha, colour))
 
     def rect(self, x: float, y: float, w: float, h: float, colour: Sequence[float], glow: float = 1.0) -> None:
@@ -89,6 +106,7 @@ class Frame:
         sl = np.s_[round(y * s) : round((y + h) * s), round(x * s) : round((x + w) * s)]
         if glow:
             self.light[sl] += np.array(colour, np.float32) * glow
+        self.bare[sl] = 0
 
         def shape(px: F32) -> None:
             px[sl] = colour
@@ -98,8 +116,16 @@ class Frame:
     def disc(self, x: float, y: float, r: float, colour: Sequence[float], glow: float = 1.0) -> None:
         if glow:
             disc(self.light, self.kit, x, y, r, np.array(colour, np.float32) * glow)  # type: ignore[arg-type]
+        box, a = disc_cover(self.kit, x, y, r)
+        self.bare[box] *= 1 - a
         kit = self.kit  # not self: a shape that held the frame would keep its arrays until a cycle collection
         self.shapes.append(lambda px: disc(px, kit, x, y, r, colour))
+
+    def blend(self, box: Any, colour: Sequence[float] | F32, alpha: NDArray[Any]) -> None:
+        """colour blended over px[box] by alpha now, under the glow: a fill the glow lights."""
+        region = self.px[box]
+        region += (np.asarray(colour) - region) * alpha
+        self.bare[box] *= 1 - alpha
 
     def draw(self, rgb: Sequence[float]) -> ImageDraw.ImageDraw:
         r, g, b = (int(c) for c in rgb)
@@ -175,7 +201,7 @@ class Frame:
         px = self.px + np.asarray(glow, np.float32) * 0.9
         for shape in self.shapes:
             shape(px)
-        return px, [(rgb, *coverage(m)) for rgb, m in self.text.items()]
+        return Still(px, [(rgb, *coverage(m)) for rgb, m in self.text.items()], self.bare)
 
 
 def extent(

@@ -196,10 +196,8 @@ class History(Design):
         fill = (yy >= height * s) & (yy <= y1 * s) & known
         fade = np.clip(1 - (yy - height * s) / ((y1 - y0) * s), 0.15, 1) * 0.45
         sub = np.s_[:, cols[0] : cols[-1] + 1]
-        region = f.px[sub]
-        a = np.where(fill, fade, 0)[..., None]
-        region += (colours[None, :, :] - region) * a
+        f.blend(sub, colours[None], np.where(fill, fade, 0)[..., None])
         edge = (np.abs(yy - height * s) <= 1.5 * s) & known
         f.light[sub] += colours[None] * edge[..., None] * 0.6
-        region += (colours[None, :, :] - region) * edge[..., None]
+        f.blend(sub, colours[None], edge[..., None])
         return f.finish()
