@@ -17,6 +17,7 @@ from .devices import Slv3, slv3
 
 GROUP = NAME  # the group the rule gives the panels to on a machine nobody logs in to
 RULE = Path("/etc/udev/rules.d/60-pixdial.rules")
+RAPL_RULE = Path("/etc/udev/rules.d/60-pixdial-rapl.rules")
 RULE_DIRS = (Path("/etc/udev/rules.d"), Path("/run/udev/rules.d"), Path("/usr/lib/udev/rules.d"))  # udev's order
 USERS = Path("/run/systemd/users")  # logind's state per user; ACTIVE_SEATS: the seats of their active sessions
 
@@ -57,7 +58,7 @@ def needs_group_rule() -> bool:
     return headless() and installed() != rule(GROUP).splitlines()
 
 
-def script(group: str | None) -> str:
+def script(group: str | None, rapl: bool = False) -> str:
     """The commands that install the rule (and on a headless machine the group, with this user in it)."""
     who = f"members of the {group} group" if group else "the user at the machine"
     lines = []
@@ -66,11 +67,21 @@ def script(group: str | None) -> str:
         lines += [f"usermod -aG {group} {shlex.quote(getpass.getuser())}"]
     lines += [f"cat > {RULE} <<'RULE'", f"# From `{NAME} setup`: lets {who} use the panels pixdial drives."]
     lines += [*rule(group).splitlines(), "RULE"]
+    if rapl:
+        lines += [
+            f"cat > {RAPL_RULE} <<'RAPL'",
+            "# Opt-in RAPL access; see CVE-2020-8694 and docs/config.md#cpu-power-permissions.",
+            'ACTION=="add", SUBSYSTEM=="powercap", KERNEL=="intel-rapl:*", '
+            f'RUN+="/bin/chgrp {GROUP} /sys%p/energy_uj", RUN+="/bin/chmod 0440 /sys%p/energy_uj"',
+            "RAPL",
+        ]
     lines += ["udevadm control --reload-rules", "udevadm trigger --subsystem-match=usb --action=add", "udevadm settle"]
+    if rapl:
+        lines += ["udevadm trigger --subsystem-match=powercap --action=add", "udevadm settle"]
     return "\n".join(lines) + "\n"
 
 
-def setup(path: Path | None, dry_run: bool) -> bool:
+def setup(path: Path | None, dry_run: bool, rapl: bool = False) -> bool:
     """Whether it ends with every check passed."""
     if dry_run:
         print(f"Dry run: `{NAME} setup` writes nothing and runs nothing. This is what it would do.\n")
@@ -81,9 +92,9 @@ def setup(path: Path | None, dry_run: bool) -> bool:
             print(f"{slv3.VENDOR:04x}:{product:04x} at usb {port}: {doctor.pointer(product)}")
         return False
     print(f"Found {len(found)} panel{'s' * (len(found) > 1)}: {', '.join(f'{f.id} at {f.where}' for f in found)}.")
-    group = GROUP if headless() else None
-    if not all(f.access for f in found) or needs_group_rule():
-        if not grant(group, dry_run):
+    group = GROUP if rapl or headless() else None
+    if rapl or not all(f.access for f in found) or needs_group_rule():
+        if not grant(group, dry_run, rapl):
             return False
         found = Slv3.discover()
         if not dry_run:
@@ -114,10 +125,14 @@ def member(group: str) -> bool:
         return False
 
 
-def grant(group: str | None, dry_run: bool) -> bool:
+def grant(group: str | None, dry_run: bool, rapl: bool = False) -> bool:
     """Prints the rule's commands and runs them through sudo; whether they ran (or would, in a dry run)."""
-    commands = script(group)
-    if group is None:
+    commands = script(group, rapl)
+    if rapl:
+        print(f"RAPL access is opt-in: the {GROUP} group gets CPU energy readings (mode 0440).")
+        print("These readings can expose other programs' activity (CVE-2020-8694).")
+        print("See docs/config.md#cpu-power-permissions. The panels use the same group.")
+    elif group is None:
         print("This user may not open the panels yet.")
     else:
         print("The service may start here with nobody at the machine (linger, or no login at its seat), so the")

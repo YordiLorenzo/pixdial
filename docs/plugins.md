@@ -60,6 +60,23 @@ A source or device can also be named as `type = "module:Class"` or `device = "mo
 provided that module is on the Python path. Designs must use entry points to appear in the CLI catalog.
 `uv tool` installs are isolated from your project environment; develop plugins in the checkout's virtualenv.
 
+## Compatibility
+
+`pixdial.PLUGIN_API` is the plugin API major, currently `1`. Declare the major your plugin targets as a module
+constant in the Python file that defines its classes:
+
+```python
+PLUGIN_API = 1
+```
+
+Use a fixed integer, not an import from pixdial: it records which API the plugin was written for. This applies
+to designs, sources and devices, both entry points and `module:Class` references. pixdial emits a `UserWarning`
+if the declared major differs from its own. The plugin still loads, but may not work. Older plugins with no
+declaration load without this warning.
+
+The [versioning policy](../CONTRIBUTING.md#versioning-policy) requires a `DeprecationWarning` one minor release
+before a breaking plugin API change in 0.x, and a `Breaking` changelog section when it happens.
+
 ## Designs
 
 Start with the runnable design in the [README](../README.md#build-a-design) or the fully typed

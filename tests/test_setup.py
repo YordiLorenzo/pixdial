@@ -134,6 +134,40 @@ def test_dry_run_writes_nothing_and_runs_nothing(
     assert not machine.sudo_log.exists() and not machine.config().exists()
     assert "sudo sh -e <<'SETUP'" in out and 'TAG+="uaccess"' in out
     assert f'serial = "{A}"' in out
+    assert "powercap" not in out and "energy_uj" not in out
+
+
+def test_rapl_is_opt_in_even_when_the_panel_group_is_needed(machine: Machine) -> None:
+    run()
+    assert "powercap" not in machine.sudo_script.read_text()
+
+
+def test_rapl_dry_run_prints_exact_commands_without_running_them(
+    machine: Machine, capsys: pytest.CaptureFixture[str]
+) -> None:
+    machine.at_seat()
+    assert run("--rapl", "--dry-run") == 0
+    dry = capsys.readouterr().out
+    assert not machine.sudo_log.exists() and not machine.config().exists()
+    run("--rapl")
+    script = machine.sudo_script.read_text()
+    assert f"sudo sh -e <<'SETUP'\n{script}SETUP\n" in dry.replace("\n  ", "\n")
+    assert "CVE-2020-8694" in dry
+    assert "cat > /etc/udev/rules.d/60-pixdial-rapl.rules <<'RAPL'" in script
+    assert 'SUBSYSTEM=="powercap", KERNEL=="intel-rapl:*"' in script
+    assert "/bin/chgrp pixdial /sys%p/energy_uj" in script
+    assert "/bin/chmod 0440 /sys%p/energy_uj" in script
+    assert "udevadm trigger --subsystem-match=powercap --action=add" in script
+    assert f"usermod -aG pixdial {getpass.getuser()}" in script
+    assert 'GROUP="pixdial", MODE="0660"' in script
+    assert machine.sudo_log.read_text() == "sh -e\n"
+
+
+def test_rapl_opt_in_runs_even_when_the_panels_already_have_access(machine: Machine) -> None:
+    machine.at_seat()
+    machine.sudo_script.write_text("")
+    run("--rapl")
+    assert "60-pixdial-rapl.rules" in machine.sudo_script.read_text()
 
 
 def test_an_existing_config_is_replaced_only_on_a_yes(

@@ -79,6 +79,26 @@ access to every panel with these USB IDs. It does not grant access to RAPL count
 The second line is for the UNI FAN TL Wireless LCD (`1cbe:0006`), which pixdial supports as experimental: it uses
 the SL V3 protocol, but no TL panel has been tested with pixdial yet.
 
+## CPU power permissions
+
+`cpu_w` in crown and flow comes from a RAPL energy counter. Linux restricts these counters because power readings
+can reveal other programs' activity, including secrets (CVE-2020-8694). `pixdial setup --rapl` opts in to read access
+for every member of the `pixdial` group; it is never enabled by plain `setup`. Only enable it if you trust the users
+and programs in that group. See [Intel's advisory](https://www.intel.com/content/www/us/en/security-center/advisory/intel-sa-00389.html).
+
+Preview the exact commands, then apply them if you accept that trade-off:
+
+```sh
+pixdial setup --rapl --dry-run
+pixdial setup --rapl
+```
+
+This installs `/etc/udev/rules.d/60-pixdial-rapl.rules`, adds your user to `pixdial`, and uses that group for the
+panels too. The RAPL rule gives the group read access (mode `0440`) to `energy_uj` on `intel-rapl:*` powercap
+devices, including AMD processors that use this driver. It applies now and when the devices appear after boot.
+It does not change power limits or grant write access. Log out and back in for the new group; with linger, reboot.
+Run `pixdial doctor` to check `source rapl`. A missing counter still needs kernel and hardware support.
+
 ## Sources
 
 With no `sources` key, pixdial uses this list:

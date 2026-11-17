@@ -26,6 +26,9 @@ You need Linux, Python 3.12 or newer, [uv](https://docs.astral.sh/uv/getting-sta
 [supported panel](#supported-hardware). For a preview without hardware, install pixdial and run
 `pixdial render crown --state busy --out preview`.
 
+For Bazzite, Fedora Atomic or SteamOS, see the [installation guide](docs/atomic-desktops.md). These distributions
+have not been tested with pixdial.
+
 1. **Install.**
 
    ```sh
@@ -232,45 +235,12 @@ pixdial is not affiliated with Lian Li or the hardware manufacturers named here.
 
 ## Troubleshooting and undo
 
-`pixdial doctor` checks the config, the panels and each source, with a hint under each problem.
+`pixdial doctor` checks the config, panels and sources, with a link under each failure.
+[The troubleshooting guide](docs/troubleshooting.md) covers busy or inaccessible panels, black screens,
+missing readings and fonts, config errors and plugins. It also explains how to collect a report or log.
 
-- **No access to a panel.** `doctor` says ``no read and write access to ...: `pixdial setup` gives it``. Run
-  `pixdial setup`.
-- **Another program holds a panel.** `doctor` says `claimed by <program> (pid <n>), so pixdial can't open it`.
-  If that is lian-li-linux, take the LCD out of its LCD list, as in
-  [the FAQ](#can-i-run-it-alongside-lian-li-linux).
-- **A panel stays black, or `pixdial devices` finds none.** Each LCD needs its own USB cable to a USB 2 header
-  on the motherboard: the wireless dongle does not carry frames. `lsusb | grep 1cbe` lists the panels attached.
-- **GPU readings are missing.** NVIDIA readings need the NVIDIA driver. AMD readings come from the experimental
-  `amdgpu` source: if `doctor` shows nothing for `source amdgpu` on a Radeon card, a
-  [Radeon report](https://github.com/YordiLorenzo/pixdial/issues/new?template=radeon.yml) helps. The default rotation
-  leaves out designs whose readings no source gives, and `doctor` lists them.
-
-**To report a problem,** open a [bug report](https://github.com/YordiLorenzo/pixdial/issues/new?template=bug.yml)
-with the output of `pixdial doctor --share`. It takes out the panel serials, the hostname and your home folder.
-For a log, stop the service first (only one program can hold a panel), run pixdial until the problem shows, then
-press Ctrl-C and start the service again:
-
-```sh
-systemctl --user stop pixdial
-pixdial run --debug --log-file pixdial.log
-systemctl --user start pixdial
-```
-
-The log holds file paths, so read it before you share it.
-
-**To undo the setup,** remove the service, the udev rule and pixdial's config and state folders:
-
-```sh
-pixdial service remove
-sudo rm /etc/udev/rules.d/60-pixdial.rules
-sudo udevadm control --reload-rules
-rm -rf ~/.config/pixdial ~/.local/state/pixdial
-uv tool uninstall pixdial
-```
-
-If setup added your user to the `pixdial` group, `sudo gpasswd -d "$USER" pixdial` takes it out. If you took
-LCDs out of lian-li-linux's config, put them back and restart its daemon.
+See [Upgrade and rollback](docs/maintenance.md#upgrade) to change versions, or
+[Uninstall](docs/maintenance.md#uninstall) to remove the service, permission rules, config and state.
 
 ## FAQ
 
@@ -289,23 +259,14 @@ quota need [additional sources](docs/config.md#sources). `pixdial doctor` shows 
 
 ### Can I run it alongside lian-li-linux?
 
-Yes. lian-li-linux keeps fan speed and RGB, and pixdial draws the LCDs. Each LCD takes one program at a time, so
-take the LCDs pixdial drives out of lian-li-linux's LCD list: delete their entries under `lcds` in its
-`config.json` (in `~/.config/lianli/` for its user service, `/var/lib/lianli/` for its system service). Then
-restart its daemon:
-
-```sh
-systemctl --user restart lianli-daemon       # the user service
-sudo systemctl restart lianli-daemon-system  # the system service
-```
-
-While another program still holds a panel, `pixdial doctor` names it.
+Yes. Each LCD takes one program at a time. Keep fan speed and RGB with it, and give pixdial the LCDs using
+[the Device busy steps](docs/troubleshooting.md#device-busy).
 
 ### Does it need root?
 
 No. pixdial runs as your user. The panel needs read and write access to its USB device node: `pixdial setup`
 installs a udev rule for that through sudo, after it prints the commands. That is the only step that runs as
-root. RAPL counters can need separate read permission.
+root. CPU power readings need a separate [opt-in RAPL rule](docs/config.md#cpu-power-permissions).
 
 ## Development
 
