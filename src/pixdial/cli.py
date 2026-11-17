@@ -217,8 +217,9 @@ def service_status(args: argparse.Namespace) -> int:
 def setup_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     setup_ = sub.add_parser("setup", help="find the panels, give this user access, write the config and check it")
     setup_.add_argument("--dry-run", action="store_true", help="print what it would do; write and run nothing")
+    setup_.add_argument("--rapl", action="store_true", help="opt in to group access to CPU power (CVE-2020-8694)")
     setup_.set_defaults(command=set_up)
 
 
 def set_up(args: argparse.Namespace) -> int:
-    return OK if setup.setup(args.config, args.dry_run) else SHORT
+    return OK if setup.setup(args.config, args.dry_run, args.rapl) else SHORT

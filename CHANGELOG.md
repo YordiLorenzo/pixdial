@@ -5,6 +5,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `setup --rapl` opts in to CPU power readings for the panel group, with a dry run and a doctor hint about access.
+
 ## [0.1.2] - 2026-11-11
 
 ### Fixed

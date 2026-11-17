@@ -26,10 +26,14 @@ from .devices import BUILTIN as DEVICES
 from .devices import Device, Found, Slv3, slv3, usbfs
 from .readings import Reading
 from .sources import BUILTIN as SOURCES
-from .sources import Source, hwmon
+from .sources import Rapl, Source, hwmon
 
 OK, SKIP, FAIL = "ok", "skip", "FAIL"
 NO_RAQM = "Text is set without the font's kerning, a little wider. For raqm, install FriBiDi (fribidi or libfribidi0)."
+RAPL_ACCESS = (
+    "cpu_w needs read access to the RAPL counter. `pixdial setup --rapl` opts in for the pixdial group. "
+    "Read the CVE-2020-8694 trade-off first (docs/config.md#cpu-power-permissions)."
+)
 HINTS = {  # why a default source gives nothing on many machines, and what follows
     "rapl": "cpu_w (the CPU's power) needs read access to the RAPL counter, which only root has by default.",
     "nvml": "No NVIDIA driver: the GPU readings come from it, so gpu and twin are left out of the rotation.",
@@ -150,11 +154,10 @@ def sources(config: cfg.Config, built: Sequence[tuple[str, Source]], wait: Calla
             readings = source.read()
         except Exception as error:
             message = str(error) or repr(error)
-            yield (
-                Check(f"source {name}", SKIP, message, HINTS.get(name, ""))
-                if optional
-                else Check(f"source {name}", FAIL, message)
-            )
+            hint = HINTS.get(name, "") if optional else ""
+            if isinstance(source, Rapl) and isinstance(error, PermissionError):
+                hint = RAPL_ACCESS
+            yield Check(f"source {name}", SKIP if optional else FAIL, message, hint)
             continue
         finally:
             source.close()

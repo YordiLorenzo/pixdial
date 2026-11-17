@@ -14,7 +14,8 @@ import pytest
 from pixdial import __version__, doctor
 from pixdial.cli import main
 from pixdial.devices import Found, Slv3, slv3, usbfs
-from pixdial.sources import hwmon, nvml
+from pixdial.readings import Reading
+from pixdial.sources import Rapl, hwmon, nvml
 
 A, B = "SERIALAAA111", "SERIALBBB222"
 WHERE = "usb 1-2 (/dev/bus/usb/001/005)"
@@ -134,6 +135,20 @@ def test_a_source_the_config_names_fails(home: Path, tmp_path: Path, capsys: pyt
     status, out = doctor_out(capsys)
     assert status == 1
     assert "FAIL  source nvml" in out
+
+
+@pytest.mark.parametrize("explicit", [False, True])
+def test_unreadable_rapl_points_to_the_opt_in(home: Path, monkeypatch: pytest.MonkeyPatch, explicit: bool) -> None:
+    def denied(self: Rapl) -> dict[str, Reading]:
+        raise PermissionError("Permission denied: energy_uj")
+
+    monkeypatch.setattr(Rapl, "read", denied)
+    path = config(home, '[[sources]]\ntype = "rapl"\n' if explicit else "")
+    checks = list(doctor.checks(path))
+    check = next(c for c in checks if c.what == "source rapl")
+    assert check.status == (doctor.FAIL if explicit else doctor.SKIP)
+    assert "pixdial setup --rapl" in check.hint
+    assert "CVE-2020-8694" in check.hint
 
 
 def test_a_panel_another_program_holds_fails_with_the_way_out(
