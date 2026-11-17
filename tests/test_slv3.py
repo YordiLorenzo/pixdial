@@ -204,6 +204,7 @@ def sysfs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     usb_device(root, "1-4", "a021", "AIOSERIAL", 6)
     (root / "1-0:1.0").mkdir()
     monkeypatch.setattr(slv3, "attached", functools.partial(usbfs.attached, sysfs=root))
+    monkeypatch.setattr("pixdial.devices.slv3.os.access", lambda path, mode: False)
     return root
 
 

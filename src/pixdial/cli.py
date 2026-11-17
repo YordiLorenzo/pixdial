@@ -87,13 +87,17 @@ def run(args: argparse.Namespace) -> int:
 def show(args: argparse.Namespace) -> int:
     config = cfg.load(args.config)
     layout = cfg.layout(config, cfg.catalog(config))
-    if args.specs:
-        try:
-            layout.save(args.specs)
-        except ValueError as error:
-            print(f"{NAME}: {error}; the panels keep {' '.join(layout.load())}", file=sys.stderr)
-            return USAGE
-    print(" ".join(layout.load()))
+    try:
+        if args.specs:
+            try:
+                layout.save(args.specs)
+            except ValueError as error:
+                print(f"{NAME}: {error}; the panels keep {' '.join(layout.load())}", file=sys.stderr)
+                return USAGE
+        print(" ".join(layout.load()))
+    except ValueError as error:
+        print(f"{NAME}: saved layout: {error}; choose a new layout with `{NAME} show`", file=sys.stderr)
+        return USAGE
     return OK
 
 
