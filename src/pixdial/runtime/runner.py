@@ -13,7 +13,7 @@ from .feed import Feed
 from .layout import Catalog, Layout
 from .report import Report
 from .sampler import Sampler
-from .screen import EARLY, Screen
+from .screen import EARLY, Screen, after
 
 STOP_WAIT = 5  # s the panels get to go dark when it stops: a hung one's USB calls time out within about 4
 BOOTTIME = getattr(time, "CLOCK_BOOTTIME", time.CLOCK_MONOTONIC)  # Linux's counts time asleep
@@ -88,8 +88,9 @@ class Runner:
         for screen in self.screens:
             if screen.due <= now + EARLY:
                 screen.tick(snapshot, now)
-        # Also wake at the shortest trail's period, so a panel's low max_fps does not thin out the history
-        due = min(min(screen.due for screen in self.screens), now + self.feed.period)
+        due = min(screen.due for screen in self.screens)
+        if self.feed.fps:  # also on the shortest trail's grid, so a panel's low max_fps does not thin out the history
+            due = min(due, after(now + EARLY, self.feed.fps))
         return max(0.0, due - self.clock.monotonic())
 
     def follow_layout(self) -> None:

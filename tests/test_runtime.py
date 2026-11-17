@@ -218,7 +218,13 @@ def test_a_panel_s_max_fps_caps_its_frames(tmp_path: Path) -> None:
     start = rig.clock.now
     delays = rig.run_for(2)
     assert len(rig.sent(0, start)) == pytest.approx(24, abs=1)
-    assert min(delays) == pytest.approx(1 / 12)
+    wakes = itertools.accumulate(delays, initial=start)
+    assert all(on_grid(t, 12) or on_grid(t, 10) for t in wakes)  # the panel's ticks, and the cpu_load trail's
+
+
+def on_grid(t: float, fps: float) -> bool:
+    """Whether t is a tick at fps: ticks lie halfway between whole multiples of 1 / fps."""
+    return abs(t * fps - 0.5 - round(t * fps - 0.5)) < 1e-6
 
 
 def test_a_low_max_fps_keeps_each_trail_at_its_period(tmp_path: Path) -> None:
