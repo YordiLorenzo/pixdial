@@ -6,6 +6,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 - `pixdial show` reports a stale saved layout without a traceback and lets you replace it.
+- Python 3.15 support.
 
 ## [0.1.2] - 2026-11-11
 
