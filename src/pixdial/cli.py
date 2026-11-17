@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import shlex
 import signal
 import subprocess
 import sys
@@ -87,13 +88,19 @@ def run(args: argparse.Namespace) -> int:
 def show(args: argparse.Namespace) -> int:
     config = cfg.load(args.config)
     layout = cfg.layout(config, cfg.catalog(config))
-    if args.specs:
-        try:
-            layout.save(args.specs)
-        except ValueError as error:
-            print(f"{NAME}: {error}; the panels keep {' '.join(layout.load())}", file=sys.stderr)
-            return USAGE
-    print(" ".join(layout.load()))
+    try:
+        if args.specs:
+            try:
+                layout.save(args.specs)
+            except ValueError as error:
+                print(f"{NAME}: {error}; the panels keep {' '.join(layout.load())}", file=sys.stderr)
+                return USAGE
+        print(" ".join(layout.load()))
+    except (OSError, ValueError) as error:
+        command = shlex.join([NAME, *(["--config", str(args.config)] if args.config else []), "show", ROTATE])
+        reason = " ".join(str(error).splitlines())
+        print(f"{NAME}: {layout.path}: {reason}; fix this file or replace it with `{command}`", file=sys.stderr)
+        return USAGE
     return OK
 
 

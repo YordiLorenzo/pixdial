@@ -50,6 +50,8 @@ pixdial show
 `layout` in the config. It lives at `$XDG_STATE_HOME/pixdial/layout`, defaulting to
 `~/.local/state/pixdial/layout`. Different `--config` files share this state unless you also set a different
 `XDG_STATE_HOME`. To select a new fixed layout, use `show` with one design per panel.
+If a saved selection names a removed design or theme, or has the wrong number of panels, `show` names the state
+file and prints a command to replace it with `show rotate`. A valid new selection replaces stale state directly.
 
 ## USB permissions
 

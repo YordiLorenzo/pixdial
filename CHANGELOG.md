@@ -5,6 +5,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `show` explains stale saved layouts, and local plugin import failures name the plugin and how to fix it, without a traceback.
+
 ## [0.1.2] - 2026-11-11
 
 ### Fixed

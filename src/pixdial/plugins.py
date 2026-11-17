@@ -38,9 +38,11 @@ def resolve[C](kind: str, base: type[C], builtin: Mapping[str, type[C]], name: s
     if ":" in name:
         module, _, attr = name.partition(":")
         try:
-            return checked(getattr(importlib.import_module(module), attr), base, name)
-        except (ImportError, AttributeError) as error:
-            raise PluginError(f"{name}: {error}") from error
+            obj = getattr(importlib.import_module(module), attr)
+        except Exception as error:
+            reason = " ".join(str(error).splitlines()) or type(error).__name__
+            raise PluginError(f"{name}: {reason}; fix the plugin or remove it from the config") from error
+        return checked(obj, base, name)
     found, broken = available(kind, base, builtin)
     if name in found:
         return found[name]
