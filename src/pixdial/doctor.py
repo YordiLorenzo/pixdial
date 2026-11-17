@@ -29,10 +29,16 @@ from .sources import BUILTIN as SOURCES
 from .sources import Rapl, Source, hwmon
 
 OK, SKIP, FAIL = "ok", "skip", "FAIL"
-NO_RAQM = "Text is set without the font's kerning, a little wider. For raqm, install FriBiDi (fribidi or libfribidi0)."
+
+
+def guide(entry: str) -> str:
+    return f"https://github.com/YordiLorenzo/pixdial/blob/main/docs/troubleshooting.md#{entry}"
+
+
+NO_RAQM = f"Text is set without the font's kerning, a little wider. Rendering still works.\n{guide('missing-raqm')}"
 RAPL_ACCESS = (
     "cpu_w needs read access to the RAPL counter. `pixdial setup --rapl` opts in for the pixdial group. "
-    "Read the CVE-2020-8694 trade-off first (docs/config.md#cpu-power-permissions)."
+    f"Read the CVE-2020-8694 trade-off first.\n{guide('cpu-power')}"
 )
 HINTS = {  # why a default source gives nothing on many machines, and what follows
     "rapl": "cpu_w (the CPU's power) needs read access to the RAPL counter, which only root has by default.",
@@ -64,12 +70,17 @@ def checks(path: Path | None, wait: Callable[[float], None] = time.sleep) -> Ite
     try:
         config = cfg.load(path)
     except cfg.ConfigError as error:
-        yield Check("config", FAIL, f"{path or cfg.config_path()}: {error}")
+        yield Check("config", FAIL, f"{path or cfg.config_path()}: {error}", guide("configuration"))
         return
     exists = config.path.exists()
     yield Check("config", OK, str(config.path) if exists else f"none at {config.path}: the defaults")
     missing = [w for w in ("Black", "Bold", "Regular") if not (FONTS / f"Lato-{w}.ttf").exists()]
-    yield Check("fonts", FAIL if missing else OK, f"missing Lato {', '.join(missing)}" if missing else str(FONTS))
+    yield Check(
+        "fonts",
+        FAIL if missing else OK,
+        f"missing Lato {', '.join(missing)}" if missing else str(FONTS),
+        guide("missing-fonts") if missing else "",
+    )
     yield Check("raqm", OK, "yes") if features.check_feature("raqm") else Check("raqm", SKIP, "no", NO_RAQM)
     for kind, base, builtin in (
         ("designs", Design, DESIGNS),
@@ -77,12 +88,12 @@ def checks(path: Path | None, wait: Callable[[float], None] = time.sleep) -> Ite
         ("devices", Device, DEVICES),
     ):
         for name, why in plugins.available(kind, base, builtin)[1].items():
-            yield Check(f"plugin {name}", FAIL, why)
+            yield Check(f"plugin {name}", FAIL, why, guide("plugins"))
     yield from panels(config)
     try:
         built = cfg.sources(config)  # built once: a plugin's source may hold a device until it is closed
     except cfg.ConfigError as error:
-        yield Check("sources", FAIL, str(error))
+        yield Check("sources", FAIL, str(error), guide("configuration"))
         return
     yield from layout(config, built)
     yield from sources(config, built, wait)
@@ -109,18 +120,28 @@ def panels(config: cfg.Config) -> Iterator[Check]:
     try:
         devices = cfg.devices(config)
     except cfg.ConfigError as error:
-        yield Check("panels", FAIL, str(error))
+        yield Check("panels", FAIL, str(error), guide("configuration"))
         return
     for name, device in devices:
         problem = device.problem()
-        yield Check(f"panel {name}", FAIL if problem else OK, problem or "attached, and this user may open it")
+        entry = "black-panel"
+        if problem and problem.startswith("no read and write access"):
+            entry = "permission-denied"
+        elif problem and problem.startswith("claimed by"):
+            entry = "device-busy"
+        yield Check(
+            f"panel {name}",
+            FAIL if problem else OK,
+            problem or "attached, and this user may open it",
+            guide(entry) if problem else "",
+        )
 
 
 def unconfigured(config: cfg.Config) -> Check:
     """No [[panels]] yet: the SL V3 panels attached, and the config that shows on them."""
     serials = [found.id for found in Slv3.discover()]
     if not serials:
-        return Check("panels", FAIL, "none in the config, and none attached", f"{slv3.CABLE}.")
+        return Check("panels", FAIL, "none in the config, and none attached", f"{slv3.CABLE}.\n{guide('black-panel')}")
     snippet = cfg.written(config, serials)
     hint = f"`{NAME} setup` writes this config, or put it in {config.path}:\n\n{snippet}"
     return Check("panels", SKIP, f"none in the config yet; {len(serials)} attached", hint)
@@ -132,7 +153,7 @@ def layout(config: cfg.Config, built: Sequence[tuple[str, Source]]) -> Iterator[
         specs = cfg.layout(config, catalog, built).load()
         left_out = {} if config.rotation and config.layout else cfg.skipped(catalog, built)
     except (cfg.ConfigError, ValueError) as error:
-        yield Check("layout", FAIL, str(error))
+        yield Check("layout", FAIL, str(error), guide("configuration"))
         return
     yield Check("layout", OK, " ".join(specs))
     if left_out:
@@ -157,6 +178,8 @@ def sources(config: cfg.Config, built: Sequence[tuple[str, Source]], wait: Calla
             hint = HINTS.get(name, "") if optional else ""
             if isinstance(source, Rapl) and isinstance(error, PermissionError):
                 hint = RAPL_ACCESS
+            else:
+                hint = f"{hint}\n{guide('source-readings')}".lstrip("\n")
             yield Check(f"source {name}", SKIP if optional else FAIL, message, hint)
             continue
         finally:

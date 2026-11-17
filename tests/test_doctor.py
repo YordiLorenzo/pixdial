@@ -10,8 +10,9 @@ import sys
 from pathlib import Path
 
 import pytest
+from PIL import features
 
-from pixdial import __version__, doctor
+from pixdial import __version__, doctor, plugins
 from pixdial.cli import main
 from pixdial.devices import Found, Slv3, slv3, usbfs
 from pixdial.readings import Reading
@@ -149,6 +150,7 @@ def test_unreadable_rapl_points_to_the_opt_in(home: Path, monkeypatch: pytest.Mo
     assert check.status == (doctor.FAIL if explicit else doctor.SKIP)
     assert "pixdial setup --rapl" in check.hint
     assert "CVE-2020-8694" in check.hint
+    assert "docs/troubleshooting.md#cpu-power" in doctor.line(check)
 
 
 def test_a_panel_another_program_holds_fails_with_the_way_out(
@@ -175,6 +177,58 @@ def test_doctor_gives_the_version_and_the_upgrade(monkeypatch: pytest.MonkeyPatc
     ):
         monkeypatch.setattr(sys, "prefix", prefix)
         assert command in doctor.upgrade()
+
+
+@pytest.mark.parametrize(
+    ("text", "what", "entry"),
+    [
+        ("[", "config", "configuration"),
+        ('[[sources]]\ntype = "not-a-source"', "sources", "configuration"),
+        ('[[panels]]\ndevice = "not-a-device"', "panels", "configuration"),
+        ('layout = ["not-a-design"]', "layout", "configuration"),
+        ("", "panels", "black-panel"),
+        ('[[sources]]\ntype = "nvml"', "source nvml", "source-readings"),
+    ],
+)
+def test_doctor_failures_link_to_their_fix(home: Path, text: str, what: str, entry: str) -> None:
+    checks = list(doctor.checks(config(home, text)))
+    failed = [c for c in checks if c.status == doctor.FAIL]
+    assert failed
+    for check in failed:
+        assert "https://github.com/YordiLorenzo/pixdial/blob/main/docs/troubleshooting.md#" in doctor.line(check)
+    check = next(c for c in failed if c.what == what)
+    assert f"docs/troubleshooting.md#{entry}" in doctor.line(check)
+
+
+@pytest.mark.parametrize(
+    ("access", "held", "entry"),
+    [(False, "", "permission-denied"), (True, "another-program (pid 9)", "device-busy")],
+)
+def test_panel_failure_links_to_the_matching_fix(
+    home: Path, monkeypatch: pytest.MonkeyPatch, access: bool, held: str, entry: str
+) -> None:
+    attach(monkeypatch, Found(A, WHERE, access, held=held))
+    checks = list(doctor.checks(config(home, f'[[panels]]\nserial = "{A}"\n')))
+    check = next(c for c in checks if c.what == "panel 1")
+    assert check.status == doctor.FAIL
+    assert f"docs/troubleshooting.md#{entry}" in doctor.line(check)
+
+
+def test_missing_fonts_and_raqm_link_to_their_fixes(home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(doctor, "FONTS", home / "no-fonts")
+    monkeypatch.setattr(features, "check_feature", lambda name: False)
+    checks = {c.what: c for c in doctor.checks(config(home, ""))}
+    assert checks["fonts"].status == doctor.FAIL
+    assert "docs/troubleshooting.md#missing-fonts" in doctor.line(checks["fonts"])
+    assert checks["raqm"].status == doctor.SKIP
+    assert "docs/troubleshooting.md#missing-raqm" in doctor.line(checks["raqm"])
+
+
+def test_broken_plugin_links_to_its_fix(home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(plugins, "available", lambda kind, base, builtin: (dict(builtin), {"bad": "missing class"}))
+    checks = [c for c in doctor.checks(config(home, "sources = []")) if c.what == "plugin bad"]
+    assert len(checks) == 3  # designs, sources and devices
+    assert all(c.status == doctor.FAIL and "docs/troubleshooting.md#plugins" in doctor.line(c) for c in checks)
 
 
 # ------------------------------------------------------------------ devices
