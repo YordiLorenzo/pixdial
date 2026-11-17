@@ -8,6 +8,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - `pixdial sensors` lists hwmon chips, sensor values and limits, with a source config entry for each sensor.
+- Corsair HXi and RMi PSU power, temperature and fan speed are read by default when a `corsairpsu` chip exists.
 
 ### Fixed
 

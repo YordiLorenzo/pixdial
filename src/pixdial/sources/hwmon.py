@@ -19,8 +19,8 @@ class Hwmon(Source):
     the alternatives on different machines (k10temp/Tctl, coretemp/Package id 0) or several sensors of one part.
     Each reading's limit is the lowest crit (else max) its sensors report."""
 
-    def __init__(self, readings: Mapping[str, str | Sequence[str]], root: str = str(HWMON)) -> None:
-        self.root = Path(root)
+    def __init__(self, readings: Mapping[str, str | Sequence[str]], root: str | None = None) -> None:
+        self.root = HWMON if root is None else Path(root)
         self.sensors = {key: [names] if isinstance(names, str) else list(names) for key, names in readings.items()}
         for key, names in self.sensors.items():
             for name in names:
@@ -56,11 +56,40 @@ class Hwmon(Source):
     def find(self, key: str) -> list[Path]:
         chips: dict[str, list[Path]] = {}
         for d in sorted(self.root.glob("hwmon*")):
-            chips.setdefault(read(d / "name"), []).append(d)  # one per CPU socket for coretemp
+            try:
+                chips.setdefault(read(d / "name"), []).append(d)  # one per CPU socket for coretemp
+            except OSError:  # a chip unplugged during discovery must not hide the others
+                continue
         found = [f for name in self.sensors[key] for f in sensor(chips, *name.split("/"))]
         if not found:
             raise FileNotFoundError(f"{key}: no hwmon sensor {' or '.join(self.sensors[key])}")
         return found
+
+
+class CorsairPsu(Hwmon):
+    """The Corsair HXi/RMi driver's DC output, highest temperature and fan speed; silent without its sensors."""
+
+    def __init__(self, root: str | None = None) -> None:
+        super().__init__(
+            {
+                "psu_w": "corsairpsu/power1",
+                "psu_c": ["corsairpsu/temp1", "corsairpsu/temp2"],
+                "psu_fan": "corsairpsu/fan1",
+            },
+            root,
+        )
+
+    def gives(self) -> frozenset[str]:
+        self.reset()  # after unplug, the same hwmon number can belong to another chip
+        for key in self.sensors:
+            try:
+                self.paths[key] = self.find(key)
+            except OSError:
+                continue
+        return frozenset(self.paths)
+
+    def read(self) -> dict[str, Reading]:
+        return super().read() if self.gives() else {}
 
 
 @dataclass(frozen=True)
@@ -94,7 +123,7 @@ def scan(root: Path) -> list[tuple[str, list[Sensor]]]:
     return found
 
 
-def chips(root: Path = HWMON) -> list[tuple[str, dict[str, Reading]]]:
+def chips(root: Path | None = None) -> list[tuple[str, dict[str, Reading]]]:
     """Readable sensors by label for doctor reports, without voltages."""
     return [
         (
@@ -105,7 +134,7 @@ def chips(root: Path = HWMON) -> list[tuple[str, dict[str, Reading]]]:
                 if s.reading is not None and s.reading.unit != "V"
             },
         )
-        for chip, sensors in scan(root)
+        for chip, sensors in scan(HWMON if root is None else root)
     ]
 
 
