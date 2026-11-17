@@ -5,6 +5,12 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- A panel's `backdrop` key puts your own picture under any design: a PNG, JPEG, GIF, APNG or WebP, dimmed at the
+  edge so the readings stay readable. An animation plays at its own speed. `none` in a layout shows the picture
+  alone.
+
 ### Changed
 
 - Each panel ticks at its own design's rate, on a fixed grid of deadlines, so an animation keeps its frame rate when

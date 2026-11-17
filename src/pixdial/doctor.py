@@ -110,6 +110,13 @@ def panels(config: cfg.Config) -> Iterator[Check]:
     for name, device in devices:
         problem = device.problem()
         yield Check(f"panel {name}", FAIL if problem else OK, problem or "attached, and this user may open it")
+    if any(e.backdrop for e in config.panels):
+        try:
+            cfg.backdrops(config)
+        except cfg.ConfigError as error:
+            yield Check("backdrops", FAIL, str(error))
+            return
+        yield Check("backdrops", OK, ", ".join(f"{e.name}: {e.backdrop}" for e in config.panels if e.backdrop))
 
 
 def unconfigured(config: cfg.Config) -> Check:
