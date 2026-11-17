@@ -15,6 +15,9 @@ from .colour import Scale, Theme
 SIZE = 400  # px across the panel
 MID = (SIZE - 1) / 2
 START, SWEEP = 225.0, 270.0  # gauges: from 7:30 clockwise over the top to 4:30, open at the bottom
+# Gradients kept, over every ring: about 0.65 MB each on a panel. A gradient follows a reading's limit (a GPU's power
+# limit), so one kept for each limit seen would grow without end; 3 panels' gauges use fewer than this at a time
+GRADIENTS = 32
 FONTS = Path(__file__).parent.parent / "fonts"  # Lato: its figures are tabular, so a number keeps its width
 
 F32 = NDArray[np.float32]
@@ -71,7 +74,7 @@ class Ring:
         # Degrees along the gauge from START, -45 to 315: the start cap's pixels lie just before 0, not near 360
         self.pos = (self.angle - START + 45) % 360 - 45
 
-    @functools.cache
+    @functools.lru_cache(maxsize=GRADIENTS)
     def gradient(self, theme: Theme, scale: Scale) -> F32:
         """The theme's level colours along the gauge for a scale: each pixel coloured as the value at its place."""
         return theme.heat(scale.level(scale.lo + self.pos / SWEEP * (scale.hi - scale.lo)))

@@ -5,6 +5,17 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Each panel ticks at its own design's rate, on a fixed grid of deadlines, so an animation keeps its frame rate when
+  the machine is busy and a late frame is skipped, not sent in a burst. A panel's `max_fps` key caps its frames a
+  second, for less CPU.
+
+### Fixed
+
+- The gauges keep at most 32 colour gradients. Before, they kept one for each limit a reading had (a GPU's power
+  limit that changes), about 0.65 MB each, so memory grew without end.
+
 ## [0.1.2] - 2026-11-11
 
 ### Fixed

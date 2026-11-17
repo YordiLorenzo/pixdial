@@ -16,6 +16,7 @@ class Feed:
     def __init__(self, meta: Mapping[str, Meta], trails: Iterable[TrailSpec]) -> None:
         self.meta = meta
         self.trails = {spec: Trail(spec) for spec in trails}
+        self.fps = max((1 / spec.period for spec in self.trails), default=0.0)  # the shortest trail's rate
 
     def snapshot(self, readings: Mapping[str, Reading], now: float, wall: float) -> Snapshot:
         snapshot = Snapshot(readings, wall, self.meta, self.trails)

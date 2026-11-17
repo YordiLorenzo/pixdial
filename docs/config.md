@@ -19,6 +19,7 @@ name = "cpu"
 serial = "FIRST_PANEL_SERIAL"
 turn = 180
 brightness = 75
+max_fps = 15
 
 [[panels]]
 name = "gpu"
@@ -34,6 +35,9 @@ serial = "SECOND_PANEL_SERIAL"
 | `panels` | One table per panel. `run` requires at least one. |
 
 A panel's `name` identifies it in log messages and must be unique. It defaults to its position, starting at `1`.
+`max_fps` caps the frames a second that panel gets: above 0 and at most 30, default 30. A design draws at its own
+rate (10 to 30 frames a second), so a cap below that rate makes its motion less smooth and uses less CPU.
+A still design draws at most 10 times a second, or at `max_fps` when that is lower.
 `device` defaults to `slv3`; the remaining keys go to that device's constructor.
 For `slv3`, `serial` is required, `turn` is 0, 90, 180 or 270 degrees clockwise (default 0), and `brightness`
 is 0 to 100 (default 100). Rotation happens on the host before JPEG encoding.

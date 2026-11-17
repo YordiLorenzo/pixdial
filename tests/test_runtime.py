@@ -14,12 +14,15 @@ import pytest
 from PIL import Image
 
 from pixdial.designs import BUILTIN, THEMES, Design, Eased, Still, Theme
+from pixdial.designs.power import History
 from pixdial.devices import Device
 from pixdial.readings import Reading, Value
 from pixdial.runtime import Catalog, Feed, Layout, Report, Runner, Sampler, Screen
-from pixdial.runtime.runner import FAST, SLOW
+from pixdial.runtime.screen import MAX_FPS, STILL_FPS
 from pixdial.sources import Source
 from tests import logged
+
+FAST, SLOW = 1 / MAX_FPS, 1 / STILL_FPS
 
 
 class Clock:
@@ -97,6 +100,7 @@ class Rig:
         panels: list[Panel] | None = None,
         more: dict[str, type[Design]] | None = None,
         live: bool = False,
+        max_fps: float = MAX_FPS,
     ) -> None:
         self.clock = Live() if live else Clock()
         self.lines: list[str] = []
@@ -108,7 +112,7 @@ class Rig:
         catalog = Catalog({**BUILTIN, **(more or {})}, THEMES, "warm")
         self.layout = Layout(catalog, len(self.panels), tmp_path / "layout", designs, list(catalog.designs), 60)
         self.sampler = Sampler([("readings", Fixed())], report, self.clock.monotonic)
-        screens = [Screen(str(i), p, report, self.clock.monotonic) for i, p in enumerate(self.panels)]
+        screens = [Screen(str(i), p, report, self.clock.monotonic, max_fps) for i, p in enumerate(self.panels)]
         feed = Feed({}, {spec for cls in BUILTIN.values() for spec in cls.trails})
         self.runner = Runner(screens, self.sampler, feed, catalog, self.layout, report, self.clock)  # type: ignore[arg-type]
 
@@ -131,15 +135,19 @@ class Rig:
         for screen in self.runner.screens:
             screen.sender.step()
 
-    def run_for(self, seconds: float) -> list[float]:
-        """Ticks for that long, as the loop would; returns the delays."""
+    def run_for(self, seconds: float, late: float = 0.0) -> list[float]:
+        """Ticks for that long, as the loop would, each wait ending late s after it should; returns the delays."""
         delays, end = [], self.clock.now + seconds
         while self.clock.now < end - 1e-9:
             self.sample()
             delay = self.tick()
             delays.append(delay)
-            self.clock.now += delay
+            self.clock.now += delay + late
         return delays
+
+    def sent(self, panel: int, start: float) -> list[float]:
+        """When a panel's frames went out from start on."""
+        return [t for t, _ in self.panels[panel].frames if t >= start]
 
     def run_live(self, seconds: float) -> None:
         """The runner's own loop and threads on the real clock, for that long."""
@@ -157,15 +165,74 @@ def test_a_still_screen_sends_once_then_every_30_s(tmp_path: Path) -> None:
     delays = rig.run_for(65)
     sent = [t - 1000 for t, _ in rig.panels[0].frames]
     assert sent == pytest.approx([0, 30, 60], abs=0.11)
-    assert delays == pytest.approx([SLOW] * len(delays))
+    assert delays[1:] == pytest.approx([SLOW] * (len(delays) - 1))  # the first comes on the grid of ticks
 
 
 def test_an_animation_runs_at_30_frames_a_second(tmp_path: Path) -> None:
     rig = Rig(tmp_path, ("psu",))
     rig.set(psu_w=300, working=2)
     delays = rig.run_for(2)
-    assert delays == pytest.approx([FAST] * len(delays))
+    assert delays[1:] == pytest.approx([FAST] * (len(delays) - 1))
     assert len(rig.panels[0].frames) == pytest.approx(60, abs=1)
+
+
+def test_each_panel_animates_at_its_own_design_s_rate(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("psu", "radar", "orb"))  # 30, 20 and 15 frames a second
+    rig.set(psu_w=300, working=2, cpu_load=40)
+    rig.run_for(1)
+    start = rig.clock.now
+    rig.run_for(2)
+    for panel, fps in enumerate((30, 20, 15)):
+        sent = rig.sent(panel, start)
+        assert len(sent) == pytest.approx(2 * fps, abs=1)
+        # Evenly spaced; 0.1.2 ticked every panel 30 times a second, so radar's frames came 1/30 and 2/30 s apart
+        assert [b - a for a, b in itertools.pairwise(sent)] == pytest.approx([1 / fps] * (len(sent) - 1))
+
+
+def test_an_animation_keeps_its_rate_when_each_wait_ends_late(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("psu",))
+    rig.set(psu_w=300, working=2)
+    rig.run_for(1)
+    start = rig.clock.now
+    rig.run_for(2, late=0.003)  # a busy machine wakes the loop a few ms late; 0.1.2 lost those, about 27 fps
+    assert len(rig.sent(0, start)) == pytest.approx(60, abs=1)
+
+
+def test_a_late_tick_skips_the_frames_it_missed(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("psu",))
+    rig.set(psu_w=300, working=2)
+    rig.run_for(1)
+    start = rig.clock.now
+    rig.clock.now += 0.2  # the loop held up for 6 frames
+    delays = rig.run_for(0.8)
+    sent = rig.sent(0, start)
+    assert min(delays) > 0  # no burst to catch up
+    assert len(sent) == pytest.approx(30 - 6, abs=1)  # in the second from start
+    assert [round(t * 60) % 2 for t in sent[1:]] == [1] * (len(sent) - 1)  # back on the grid of 1/30 s
+
+
+def test_a_panel_s_max_fps_caps_its_frames(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("psu",), max_fps=12)
+    rig.set(psu_w=300, working=2)
+    rig.run_for(1)
+    start = rig.clock.now
+    delays = rig.run_for(2)
+    assert len(rig.sent(0, start)) == pytest.approx(24, abs=1)
+    wakes = itertools.accumulate(delays, initial=start)
+    assert all(on_grid(t, 12) or on_grid(t, 10) for t in wakes)  # the panel's ticks, and the cpu_load trail's
+
+
+def on_grid(t: float, fps: float) -> bool:
+    """Whether t is a tick at fps: ticks lie halfway between whole multiples of 1 / fps."""
+    return abs(t * fps - 0.5 - round(t * fps - 0.5)) < 1e-6
+
+
+def test_a_low_max_fps_keeps_each_trail_at_its_period(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, ("history",), max_fps=0.5)
+    rig.set(psu_w=300)
+    rig.run_for(20)
+    trail = rig.runner.feed.trails[History.WATTS]
+    assert len(trail.t) == pytest.approx(20, abs=1)  # a sample a second, not one per frame every 2 s
 
 
 def test_the_still_part_is_drawn_at_most_10_times_a_second(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -215,7 +282,7 @@ def test_a_new_design_fades_in_over_the_last_frame(tmp_path: Path) -> None:
     delays = rig.run_for(0.6)
     faded = rig.panels[0].frames[frames:]
     assert 11 <= len(faded) <= 14  # 0.4 s at 30 frames a second, then none: crown is still
-    assert delays[0] == pytest.approx(FAST) and delays[-1] == pytest.approx(SLOW)
+    assert delays[1] == pytest.approx(FAST) and delays[-1] == pytest.approx(SLOW)
 
 
 def test_a_panel_that_will_not_open_is_tried_after_a_wait_that_doubles(tmp_path: Path) -> None:

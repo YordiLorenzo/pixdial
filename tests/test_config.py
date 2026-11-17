@@ -21,6 +21,7 @@ rotate_every = 30
 name = "top"
 serial = "a1b2"
 turn = 180
+max_fps = 15
 
 [[panels]]
 device = "png"
@@ -67,6 +68,7 @@ def test_a_full_config(tmp_path: Path) -> None:
     assert config.theme == "ember"
     assert config.rotate_every == 30
     assert [p.name for p in config.panels] == ["top", "2"]
+    assert [p.max_fps for p in config.panels] == [15, 30]
     devices = cfg.devices(config)
     assert isinstance(devices[0][1], Slv3) and devices[0][1].turn == 180
     assert isinstance(devices[1][1], Png) and devices[1][1].path == Path.home() / "panel.png"
@@ -158,6 +160,9 @@ def test_no_file_at_the_default_place_means_the_defaults(tmp_path: Path, monkeyp
         ('[[panels]]\nserial = "a"\nturn = 45', "panels[0]: turn must be 0, 90, 180 or 270"),
         ('[[panels]]\nserial = "a"\nspin = 1', "panels[0]: slv3 takes no 'spin' (it takes serial, turn, brightness)"),
         ('[[panels]]\ndevice = "lcd9000"', "panels[0]: no device 'lcd9000'"),
+        ('[[panels]]\nserial = "a"\nmax_fps = 0', "panels[0].max_fps: must be above 0 and at most 30, not 0"),
+        ('[[panels]]\nserial = "a"\nmax_fps = 60', "panels[0].max_fps: must be above 0 and at most 30, not 60"),
+        ('[[panels]]\nserial = "a"\nmax_fps = "10"', "panels[0].max_fps: must be a number"),
         ('[[panels]]\nname = "a"\nserial = "1"\n[[panels]]\nname = "a"\nserial = "2"', "two panels named 'a'"),
         ("[[sources]]\nperiod = 1", "sources[0]: needs type"),
         ('[[sources]]\ntype = "hwmon"\nreadings = { cpu_c = "Tctl" }', "sources[0]: cpu_c: 'Tctl' is not chip/sensor"),
@@ -186,6 +191,12 @@ def test_run_makes_each_source_once(tmp_path: Path) -> None:
     config = load(tmp_path, f'{THREE}[[sources]]\ntype = "{__name__}:Counted"\n')
     cfg.runner(config, Report())
     assert Counted.made == 1
+
+
+def test_run_gives_each_panel_its_max_fps(tmp_path: Path) -> None:
+    text = '[[panels]]\ndevice = "png"\npath = "a.png"\nmax_fps = 12.5\n[[panels]]\ndevice = "png"\npath = "b.png"\n'
+    screens = cfg.runner(load(tmp_path, text), Report()).screens
+    assert [s.max_fps for s in screens] == [12.5, 30]
 
 
 def test_run_needs_panels(tmp_path: Path) -> None:

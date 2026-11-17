@@ -16,7 +16,9 @@ the device. Designs contain no I/O; sources and devices handle it at either end.
 1. The sampler reads each source in its own thread and drops stale values from the next snapshot.
 2. A design's `update()` returns keys for its still and moving parts.
 3. The screen redraws the still part only when its key changes, at most 10 times per second.
-4. Motion is drawn over a copy at the design's frame rate, up to the runtime's 30 frames per second.
+4. Motion is drawn over a copy at the design's frame rate, up to 30 frames per second or the panel's `max_fps`.
+   Each panel has its own next tick, on a fixed grid at that rate: a late tick skips the frames it missed instead of
+   sending them in a burst, and the frames after it keep their pace.
 5. A changed frame goes to the panel's own thread, which sends the newest frame it has, so a slow or hung panel
    holds up only itself. An unchanged frame is resent after 30 seconds; switching designs blends over 0.4 seconds.
 
