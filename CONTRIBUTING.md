@@ -116,6 +116,21 @@ Actions** and run **Actions → Pages → Run workflow**. The production URL is
 GitHub Pages project sites share the origin's `/robots.txt`; `site/robots.txt` records the intended policy and
 sitemap, but does not override that origin-wide file.
 
+## Versioning policy
+
+pixdial uses `MAJOR.MINOR.PATCH` versions. Patch releases contain fixes only. New features go in minor releases.
+
+During 0.x, a minor release may break the plugin API only if the preceding minor release emits a
+`DeprecationWarning` for the affected API. The release that breaks it includes a `Breaking` section in its
+changelog. A patch release never breaks the plugin API. `pixdial.PLUGIN_API` is the supported plugin API major,
+currently `1`; see [plugin compatibility](docs/plugins.md#compatibility).
+
+From 0.2 until 1.0, deprecated config keys must still load with their old meaning. `pixdial doctor` must warn
+about each deprecated key and name its replacement. A rename must keep the old key as an alias until 1.0.
+
+Supported Python versions are every version tested by [CI](.github/workflows/ci.yml), currently 3.12, 3.13 and
+3.14. A Python version may be dropped only in a minor release, after it reaches upstream end of life.
+
 ## Releasing
 
 Set the release version in `pyproject.toml`, refresh `uv.lock` with `uv lock`, and move

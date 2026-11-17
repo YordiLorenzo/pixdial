@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import importlib
 import sys
+import warnings
 from collections.abc import Iterator
 from importlib.metadata import EntryPoint
 from pathlib import Path
@@ -13,6 +15,7 @@ from pixdial import config as cfg
 from pixdial import plugins
 from pixdial.designs import BUILTIN, THEMES, Design
 from pixdial.readings import Snapshot
+from pixdial.sources import Source
 
 EXAMPLE = Path(__file__).parent.parent / "examples" / "plugin"
 
@@ -59,3 +62,28 @@ def test_entry_points(example: None, monkeypatch: pytest.MonkeyPatch) -> None:
         plugins.resolve("designs", Design, BUILTIN, "broken")
     with pytest.raises(plugins.PluginError, match="no design 'nope'"):
         plugins.resolve("designs", Design, BUILTIN, "nope")
+
+
+@pytest.mark.parametrize("installed", [False, True])
+@pytest.mark.parametrize("api", [None, 1, 2])
+def test_plugin_api_mismatch_warns_without_blocking_load(
+    example: None, monkeypatch: pytest.MonkeyPatch, installed: bool, api: int | None
+) -> None:
+    module = importlib.import_module("pixdial_example")
+    if api is not None:
+        monkeypatch.setattr(module, "PLUGIN_API", api, raising=False)
+    target = "pixdial_example:LoadAverage"
+    monkeypatch.setattr(plugins, "entry_points", lambda **kwargs: [EntryPoint("example", target, "pixdial.sources")])
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        cls = plugins.resolve("sources", Source, {}, "example" if installed else target)
+    assert cls is module.LoadAverage
+    if api == 2:
+        assert len(caught) == 1
+        assert issubclass(caught[0].category, UserWarning)
+        assert (
+            str(caught[0].message)
+            == f"{target} declares plugin API 2; pixdial supports 1. Update the plugin or pixdial."
+        )
+    else:
+        assert caught == []

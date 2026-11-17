@@ -8,10 +8,11 @@ config as "module:Class", for a module on the Python path.
 from __future__ import annotations
 
 import importlib
+import warnings
 from collections.abc import Mapping
 from importlib.metadata import entry_points
 
-from . import NAME
+from . import NAME, PLUGIN_API
 
 
 class PluginError(LookupError):
@@ -52,4 +53,11 @@ def resolve[C](kind: str, base: type[C], builtin: Mapping[str, type[C]], name: s
 def checked[C](obj: object, base: type[C], where: str) -> type[C]:
     if not (isinstance(obj, type) and issubclass(obj, base)):
         raise PluginError(f"{where} is not a {base.__name__}")
+    api = getattr(importlib.import_module(obj.__module__), "PLUGIN_API", PLUGIN_API)
+    if api != PLUGIN_API:
+        warnings.warn(
+            f"{where} declares plugin API {api}; pixdial supports {PLUGIN_API}. Update the plugin or pixdial.",
+            UserWarning,
+            stacklevel=2,
+        )
     return obj
