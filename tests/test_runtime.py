@@ -484,7 +484,7 @@ class Cheap(Design):
         return 0, self.count
 
     def still(self) -> Still:
-        return np.zeros((400, 400, 3), np.float32), []
+        return Still(np.zeros((400, 400, 3), np.float32), [])
 
 
 class Hung(Panel):

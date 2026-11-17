@@ -146,14 +146,14 @@ def after(t: float, fps: float) -> float:
 
 
 def draw(design: Design) -> Cached:
-    px, text = design.still()
+    px, text = design.still()[:2]
     # Moving parts clear of the text go straight onto the finished 8-bit picture: about 1 ms a frame
-    return (px, text), None if design.under_text else np.asarray(with_text(px.copy(), text))
+    return Still(px, text), None if design.under_text else np.asarray(with_text(px.copy(), text))
 
 
 def compose(design: Design, still: Cached, now: float) -> Frame8:
     """The design's frame: its moving part over a copy of the still part."""
-    (px, text), done = still
+    (px, text, _), done = still
     frame: Pixels = (px if done is None else done).copy()
     design.moving(frame, now)
     return np.asarray(with_text(frame, text)) if done is None else frame

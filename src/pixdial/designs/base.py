@@ -58,7 +58,7 @@ class Design:
 
     def render(self, now: float) -> Image.Image:
         """The whole frame at once (the runtime keeps the still part and repaints only the moving one)."""
-        px, text = self.still()
+        px, text = self.still()[:2]
         self.moving(px, now)
         return with_text(px, text)
 
